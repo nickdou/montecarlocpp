@@ -20,7 +20,7 @@ typedef boost::random::random_device Dev;
 typedef boost::random::mt19937 Rng;
 typedef boost::random::uniform_01<double> UniformDist01;
 typedef boost::random::uniform_real_distribution<double> UniformDist;
-typedef boost::random::uniform_int_distribution<unsigned long> UniformIntDist;
-typedef boost::random::discrete_distribution<unsigned long, double> DiscreteDist;
+typedef boost::random::uniform_int_distribution<long> UniformIntDist;
+typedef boost::random::discrete_distribution<long, double> DiscreteDist;
 
 #endif

@@ -28,6 +28,7 @@ public:
     protected:
         typedef Eigen::Vector3d Vector3d;
     public:
+        virtual ~Shape() {}
         virtual bool isInit() const = 0;
         virtual Vector3d normal() const = 0;
         virtual double area() const = 0;
@@ -182,6 +183,7 @@ public:
 class Emitter {
 public:
     typedef boost::is_base_of<Emitter, boost::mpl::_> IsBaseL;
+    virtual ~Emitter() {}
     virtual const Subdomain* emitSdom() const = 0;
     virtual const Boundary* emitBdry() const = 0;
     virtual double emitWeight() const = 0;

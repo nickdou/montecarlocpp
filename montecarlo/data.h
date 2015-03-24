@@ -225,7 +225,7 @@ public:
     }
     void print(std::ostream& os, int precision, int width) const {
         Eigen::IOFormat fmt(precision, width, " ", "", "", "", "[", "]");
-        unsigned long i = 0;
+        long i = 0;
         for (typename Base::const_iterator region = Base::begin();
              region != Base::end(); ++region)
         {

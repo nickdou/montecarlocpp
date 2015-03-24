@@ -16,7 +16,6 @@
 		5FC066BC1AA09BED000CB122 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5FF27DE11A781F50001ACEF9 /* main.cpp */; };
 		5FC066BD1AA0A747000CB122 /* problem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5F3BBDBC1A96DB350003B8BC /* problem.cpp */; };
 		5FC066BE1AA0A74A000CB122 /* problem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5F3BBDBC1A96DB350003B8BC /* problem.cpp */; };
-		5FE18E751AC0922E00FD011D /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = 5FE18E741AC0922E00FD011D /* Makefile */; };
 		5FF27DED1A782015001ACEF9 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5FF27DEC1A782015001ACEF9 /* main.cpp */; };
 		5FF27DF31A782030001ACEF9 /* material.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5FF27DF11A782030001ACEF9 /* material.cpp */; };
 		5FF27DF41A782030001ACEF9 /* material.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5FF27DF11A782030001ACEF9 /* material.cpp */; };
@@ -97,7 +96,12 @@
 		5FC066B51A9FC9F5000CB122 /* x.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = x.cpp; sourceTree = "<group>"; };
 		5FC066B61A9FC9F5000CB122 /* x.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = x.h; sourceTree = "<group>"; };
 		5FE18E731AC091F400FD011D /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		5FE18E741AC0922E00FD011D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = montecarlo/Makefile; sourceTree = "<group>"; };
+		5FE18E771AC1324000FD011D /* grey_disp.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = grey_disp.txt; sourceTree = "<group>"; };
+		5FE18E781AC1324000FD011D /* grey_relax.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = grey_relax.txt; sourceTree = "<group>"; };
+		5FE18E791AC1324000FD011D /* grey_relax2.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = grey_relax2.txt; sourceTree = "<group>"; };
+		5FE18E7A1AC1324000FD011D /* Si_disp.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Si_disp.txt; sourceTree = "<group>"; };
+		5FE18E7B1AC1324000FD011D /* Si_relax.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Si_relax.txt; sourceTree = "<group>"; };
+		5FE18E7C1AC1324000FD011D /* Si_relax2.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Si_relax2.txt; sourceTree = "<group>"; };
 		5FE589651AA2AA8A00AD3E66 /* grid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = grid.cpp; sourceTree = "<group>"; };
 		5FE589661AA2AA8A00AD3E66 /* grid.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = grid.h; sourceTree = "<group>"; };
 		5FE589691AA402F900AD3E66 /* random.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = random.h; sourceTree = "<group>"; };
@@ -198,7 +202,6 @@
 		5FA988161A71FBA500365690 = {
 			isa = PBXGroup;
 			children = (
-				5FE18E741AC0922E00FD011D /* Makefile */,
 				5FE18E731AC091F400FD011D /* README.md */,
 				5FACF6711A9D1E6100F76CED /* libboost_random.a */,
 				5F956F521A72045F003CD158 /* hello */,
@@ -210,10 +213,24 @@
 			);
 			sourceTree = "<group>";
 		};
+		5FE18E761AC1324000FD011D /* input */ = {
+			isa = PBXGroup;
+			children = (
+				5FE18E771AC1324000FD011D /* grey_disp.txt */,
+				5FE18E781AC1324000FD011D /* grey_relax.txt */,
+				5FE18E791AC1324000FD011D /* grey_relax2.txt */,
+				5FE18E7A1AC1324000FD011D /* Si_disp.txt */,
+				5FE18E7B1AC1324000FD011D /* Si_relax.txt */,
+				5FE18E7C1AC1324000FD011D /* Si_relax2.txt */,
+			);
+			path = input;
+			sourceTree = "<group>";
+		};
 		5FF27DE01A781F50001ACEF9 /* montecarlo */ = {
 			isa = PBXGroup;
 			children = (
 				5FF27DE11A781F50001ACEF9 /* main.cpp */,
+				5FE18E761AC1324000FD011D /* input */,
 				5F3BBDBD1A96DB350003B8BC /* problem.h */,
 				5F3BBDBC1A96DB350003B8BC /* problem.cpp */,
 				5FA874FB1A84018A009E2F71 /* domain.h */,
@@ -440,7 +457,6 @@
 			files = (
 				5FC066BC1AA09BED000CB122 /* main.cpp in Sources */,
 				5FF27DF31A782030001ACEF9 /* material.cpp in Sources */,
-				5FE18E751AC0922E00FD011D /* Makefile in Sources */,
 				5FC066BD1AA0A747000CB122 /* problem.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

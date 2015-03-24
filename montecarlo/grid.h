@@ -20,21 +20,20 @@
 
 class Grid {
 protected:
-    typedef Eigen::Matrix<unsigned long, 3, 1> Vector3ul;
     typedef Eigen::Matrix<long, 3, 1> Vector3l;
     typedef Eigen::Vector3d Vector3d;
     typedef Eigen::Matrix3d Matrix3d;
 private:
     Vector3d o_;
     Matrix3d mat_, inv_;
-    Vector3ul div_, max_;
+    Vector3l div_, max_;
     double vol_;
-    unsigned int dim_;
-    unsigned int findDir() const {
-        Vector3ul::Index d;
+    int dim_;
+    int findDir() const {
+        Vector3l::Index d;
         div_.maxCoeff(&d);
         BOOST_ASSERT_MSG(d >= 0 && d < 3, "Index out of range");
-        return static_cast<unsigned int>(d);
+        return static_cast<int>(d);
     }
     template<bool Check>
     Vector3d getCoord(const Vector3d& pos) const {
@@ -55,20 +54,20 @@ private:
         }
         return div_.cast<double>().cwiseProduct(norm);
     }
-    Vector3ul getIndex(const Vector3d& coord) const {
+    Vector3l getIndex(const Vector3d& coord) const {
         Vector3l vec(floor(coord(0)), floor(coord(1)), floor(coord(2)));
-        return vec.cwiseMax(0).cast<unsigned long>().cwiseMin(max_);
+        return vec.cwiseMax(0l).cwiseMin(max_);
     }
     static long floor(double d) {
         return static_cast<long>(std::floor(d));
     }
 public:
     Grid() : vol_(0.) {}
-    Grid(const Vector3d& o, const Matrix3d& mat, const Vector3ul& div)
+    Grid(const Vector3d& o, const Matrix3d& mat, const Vector3l& div)
     : o_(o), mat_(mat), inv_(mat.inverse()),
-    div_(div), max_(div.cwiseMax(1) - Vector3ul::Ones()),
+    div_(div), max_(div.cwiseMax(1) - Vector3l::Ones()),
     vol_(mat.determinant() / div.cwiseMax(1).prod()),
-    dim_(static_cast<unsigned int>( (div.array() > 0).count() ))
+    dim_(static_cast<int>( (div.array() > 0).count() ))
     {
         BOOST_ASSERT_MSG(dim_ <= 3, "Dimensionality must be between 0 and 3");
         BOOST_ASSERT_MSG(std::abs(vol_) >= Dbl::min(),
@@ -77,7 +76,7 @@ public:
     bool isInit() const { return vol_ != 0.; }
     const Vector3d& origin() const { return o_; }
     const Matrix3d& matrix() const { return mat_; }
-    const Vector3ul& shape() const { return div_; }
+    const Vector3l& shape() const { return div_; }
     double cellVol() const { return vol_; }
     template<typename T>
     void accumulate(const Vector3d& begin, const Vector3d& end,
@@ -92,13 +91,13 @@ public:
         Vector3d eCoord = getCoord<true>(end);
         Vector3d dCoord = eCoord - bCoord;
         if (dCoord.norm() < Dbl::min()) return;
-        Vector3ul bIndex = getIndex(bCoord);
-        Vector3ul eIndex = getIndex(eCoord);
+        Vector3l bIndex = getIndex(bCoord);
+        Vector3l eIndex = getIndex(eCoord);
         
         if (dim_ == 1) {
-            static unsigned int d = findDir();
-            unsigned long b = bIndex(d);
-            unsigned long e = eIndex(d);
+            static int d = findDir();
+            long b = bIndex(d);
+            long e = eIndex(d);
             Collection bColl(0,0,0);
             Collection eColl(0,0,0);
             bColl[d] = b;
@@ -119,7 +118,7 @@ public:
                 pm = -1;
             }
             Collection iColl(0,0,0);
-            for (unsigned long i = b + pm; i != e; i += pm) {
+            for (long i = b + pm; i != e; i += pm) {
                 iColl[d] = i;
                 data(iColl) += cellQuant;
             }
@@ -129,9 +128,9 @@ public:
             typedef std::map<double, Vector3l> Map;
             Map borderMap;
             Map::iterator ins = borderMap.begin();
-            for (unsigned int d = 0; d < 3; d++) {
-                unsigned long b = bIndex(d);
-                unsigned long e = eIndex(d);
+            for (int d = 0; d < 3; d++) {
+                long b = bIndex(d);
+                long e = eIndex(d);
                 int pm;
                 if (b == e) {
                     continue;
@@ -147,7 +146,7 @@ public:
                 ins = borderMap.begin();
                 Vector3l step = pm * Vector3l::Unit(d);
                 bool search = !borderMap.empty();
-                for (unsigned long i = b; i != e; i += pm) {
+                for (long i = b; i != e; i += pm) {
                     double param = (i - bCoord(d)) / dCoord(d);
                     BOOST_ASSERT_MSG(param >= 0. && param <= 1.,
                                      "Parameter out of range");
@@ -164,15 +163,16 @@ public:
             }
             borderMap.insert(ins, Map::value_type(1., Vector3l::Zero()));
             
-            Vector3ul index = bIndex;
+            Vector3l index = bIndex;
             double param = 0.;
             for (Map::const_iterator border = borderMap.begin();
                  border != borderMap.end(); ++border)
             {
                 data( Collection(index) ) += quant * (border->first - param);
                 param = border->first;
-                index = (index.cast<long>() +
-                         border->second).cast<unsigned long>();
+                index += border->second;
+//                index = (index.cast<long>() +
+//                         border->second).cast<unsigned long>();
             }
             BOOST_ASSERT_MSG(index == eIndex, "Final index incorrect");
         }

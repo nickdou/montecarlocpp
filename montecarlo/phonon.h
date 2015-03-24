@@ -19,25 +19,26 @@ protected:
     typedef Eigen::ParametrizedLine<double, 3> Line3d;
 public:
     class Prop {
-        unsigned long w_, p_;
+        long w_, p_;
     public:
         Prop() {}
-        Prop(unsigned long omega, unsigned long pol) : w_(omega), p_(pol) {}
-        unsigned long w() const { return w_; }
-        unsigned long p() const { return p_; }
+        Prop(long omega, long pol) : w_(omega), p_(pol) {}
+        long w() const { return w_; }
+        long p() const { return p_; }
     };
 private:
     Prop prop_;
     bool alive_, sign_;
     Vector3d x_, d_;
     Line3d l_;
-    unsigned long nscat_;
+    long nscat_;
 public:
     Phonon() {}
     Phonon(const Prop& prop, const Vector3d& pos, const Vector3d& dir, bool s)
     : prop_(prop), alive_(true), sign_(s),
     x_(pos), d_(dir.normalized()), l_(pos, dir.normalized()), nscat_(0)
     {}
+    virtual ~Phonon() {}
     const Prop& prop() const { return prop_; }
     void prop(const Prop& p) { prop_ = p; }
     bool alive() const { return alive_; }
@@ -46,7 +47,7 @@ public:
     const Vector3d& pos() const { return x_; }
     const Vector3d& dir() const { return d_; }
     const Line3d& line() const { return l_; }
-    unsigned long nscat() const { return nscat_; }
+    long nscat() const { return nscat_; }
     virtual void pos(const Vector3d& newPos) {
         x_ = newPos;
         l_ = Line3d(x_, d_);
@@ -76,6 +77,7 @@ public:
     TrkPhonon(const Phonon& phn) : Phonon(phn), traj_() {
         traj_.push_back(phn.pos());
     }
+    ~TrkPhonon() {}
     const Traj& traj() { return traj_; }
     const Vector3d& pos() const { return Phonon::pos(); }
     void pos(const Vector3d& newPos) {

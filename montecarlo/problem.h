@@ -35,7 +35,7 @@ public:
         std::time(&start_);
     }
     static std::string timestamp() {
-        static const unsigned int size = 80;
+        static const int size = 80;
         std::time_t now;
         char buffer[size];
         std::time(&now);
@@ -57,33 +57,32 @@ public:
 
 class Progress {
 private:
-    unsigned long tot_, count_;
-    unsigned int div_, next_;
-    std::vector<unsigned long> vec_;
+    long tot_, count_, div_, next_;
+    std::vector<long> vec_;
     Clock clk_;
     std::ostream* os_;
     void initVec() {
         BOOST_ASSERT_MSG(tot_ >= div_, "Too many divisions");
-        for (unsigned int i = 0; i < div_; ++i) {
+        for (long i = 0; i < div_; ++i) {
             vec_.push_back(tot_ * (i+1) / div_);
         }
     }
 public:
     Progress()
     : tot_(0), count_(0), div_(0), next_(0), vec_(), clk_(), os_(&std::cout) {}
-    Progress(unsigned long tot, unsigned int div)
+    Progress(long tot, long div)
     : tot_(tot), count_(0), div_(div), next_(0), vec_(), clk_(), os_(&std::cout)
     {
         initVec();
     }
-    void div(unsigned int d) {
+    void div(long d) {
         BOOST_ASSERT_MSG(count_ == 0, "Cannot change divisions");
         div_ = d;
         initVec();
     }
     void clock(const Clock& clk) { clk_ = clk; }
     void ostream(std::ostream* os) { os_ = os; }
-    unsigned long increment() {
+    long increment() {
         if (tot_ == 0 || next_ >= div_) return count_;
         count_++;
         if (count_ == vec_.at(next_)) {
@@ -98,18 +97,19 @@ public:
 
 class Problem {
 protected:
-    static const unsigned int loopFactor_ = 100;
+    static const long loopFactor_ = 100;
     const Material* mat_;
     const Domain* dom_;
-    unsigned long nemit_, maxscat_, maxloop_;
+    long nemit_, maxscat_, maxloop_;
 public:
     Problem() : mat_(0), dom_(0) {}
     Problem(const Material* mat, const Domain* dom,
-            unsigned long nemit, unsigned long maxscat, unsigned long maxloop)
+            long nemit, long maxscat, long maxloop)
     : mat_(mat), dom_(dom), nemit_(nemit), maxscat_(maxscat), maxloop_(maxloop)
     {
         BOOST_ASSERT_MSG(dom_->isInit(), "Domain setup not complete");
     };
+    virtual ~Problem() {}
     virtual Progress initProgress() const = 0;
     template<typename T>
     Field<T> initField() const {
@@ -135,13 +135,13 @@ private:
     };
     struct CalcEmitF {
         double totWeight_;
-        unsigned long nemit_;
-        CalcEmitF(double totWeight, unsigned long nemit)
+        long nemit_;
+        CalcEmitF(double totWeight, long nemit)
         : totWeight_(totWeight), nemit_(nemit) {}
-        unsigned long operator()(const Emitter* emit) const {
+        long operator()(const Emitter* emit) const {
             double frac = emit->emitWeight() / totWeight_;
             double rounded = std::ceil(frac * nemit_ - 0.5);
-            return std::max(1ul, static_cast<unsigned long>(rounded));
+            return std::max(1l, static_cast<long>(rounded));
         }
     };
     template<typename T, typename M>
@@ -161,7 +161,8 @@ private:
                     coll[1] = j;
                     for (Size i = 0; i < data.shape()[0]; ++i) {
                         coll[0] = i;
-                        multiply(data(coll), factor_ / sdom->cellVol(index));
+                        multiply(data(coll),
+                                 factor_ / sdom->cellVol( index.cast<long>() ));
                     }
                 }
             }
@@ -220,31 +221,30 @@ public:
     TrajProblem(const Material* mat, const Domain* dom,
                 const Phonon::Prop& prop,
                 const Eigen::Vector3d& pos, const Eigen::Vector3d& dir,
-                unsigned long maxscat = 100, unsigned long maxloop = 0)
+                long maxscat = 100, long maxloop = 0)
     : Problem(mat, dom, 1, maxscat, maxloop), prop_(prop), pos_(pos), dir_(dir)
     {}
     TrajProblem(const Material* mat, const Domain* dom,
                 const Phonon::Prop& prop, const Eigen::Vector3d& pos,
-                unsigned long maxscat = 100, unsigned long maxloop = 0)
+                long maxscat = 100, long maxloop = 0)
     : Problem(mat, dom, 1, maxscat, maxloop), prop_(prop), pos_(pos), dir_()
     {}
     TrajProblem(const Material* mat, const Domain* dom,
                 const Eigen::Vector3d& pos, const Eigen::Vector3d& dir,
-                unsigned long maxscat = 100, unsigned long maxloop = 0)
+                long maxscat = 100, long maxloop = 0)
     : Problem(mat, dom, 1, maxscat, maxloop), prop_(), pos_(pos), dir_(dir)
     {}
     TrajProblem(const Material* mat, const Domain* dom,
                 const Eigen::Vector3d& pos,
-                unsigned long maxscat = 100, unsigned long maxloop = 0)
+                long maxscat = 100, long maxloop = 0)
     : Problem(mat, dom, 1, maxscat, maxloop), prop_(), pos_(pos), dir_()
     {}
     TrajProblem(const Material* mat, const Domain* dom,
-                unsigned long maxscat = 100, unsigned long maxloop = 0)
+                long maxscat = 100, long maxloop = 0)
     : Problem(mat, dom, 1, maxscat, maxloop), prop_(), pos_(), dir_()
     {}
     Progress initProgress() const {
-        return Progress(maxscat_,
-                        static_cast<unsigned int>( std::min(10ul, maxscat_) ));
+        return Progress(maxscat_, std::min(10l, maxscat_));
     }
     Trajectory solve(Rng& gen, Progress* prog = 0) const;
 };
@@ -258,7 +258,7 @@ public:
     Trajectory(const TrajProblem* prob, const TrkPhonon::Traj& traj)
     : prob_(prob), arr_(traj.size(), 3)
     {
-        unsigned long i = 0;
+        Eigen::ArrayXXd::Index i = 0;
         for (TrkPhonon::Traj::const_iterator x = traj.begin(); x != traj.end();
              ++x) {
             arr_.row(i++) = *x;
@@ -278,13 +278,12 @@ class Temperature;
 class TempProblem : public Problem {
 public:
     TempProblem() : Problem() {}
-    TempProblem(const Material* mat, const Domain* dom, unsigned long nemit,
-                unsigned long maxscat, unsigned long maxloop = 0)
+    TempProblem(const Material* mat, const Domain* dom, long nemit,
+                long maxscat, long maxloop = 0)
     : Problem(mat, dom, nemit, maxscat, maxloop)
     {}
     Progress initProgress() const {
-        return Progress(nemit_,
-                        static_cast<unsigned int>( std::min(20ul, nemit_) ));
+        return Progress(nemit_, std::min(20l, nemit_));
     }
     Temperature solve(Rng& gen, Progress* prog = 0) const;
 private:
@@ -325,13 +324,12 @@ private:
 public:
     FluxProblem() : Problem() {}
     FluxProblem(const Material* mat, const Domain* dom,
-                const Eigen::Vector3d& dir, unsigned long nemit,
-                unsigned long maxscat, unsigned long maxloop = 0)
+                const Eigen::Vector3d& dir, long nemit,
+                long maxscat, long maxloop = 0)
     : Problem(mat, dom, nemit, maxscat, maxloop), dir_(dir)
     {}
     Progress initProgress() const {
-        return Progress(nemit_,
-                        static_cast<unsigned int>( std::min(20ul, nemit_) ));
+        return Progress(nemit_, std::min(20l, nemit_));
     }
     Flux solve(Rng& gen, Progress* prog = 0) const;
 private:
@@ -372,16 +370,15 @@ private:
 public:
     MultiProblem() : Problem() {}
     MultiProblem(const Material* mat, const Domain* dom,
-                 const Eigen::Matrix3d& rot, unsigned long nemit,
-                 unsigned long maxscat, unsigned long maxloop = 0)
+                 const Eigen::Matrix3d& rot, long nemit,
+                 long maxscat, long maxloop = 0)
     : Problem(mat, dom, nemit, maxscat, maxloop), inv_(rot.transpose())
     {
         BOOST_ASSERT_MSG(Eigen::Matrix3d::Identity().isApprox(inv_*rot),
                          "Direction matrix must be unitary");
     }
     Progress initProgress() const {
-        return Progress(nemit_,
-                        static_cast<unsigned int>( std::min(20ul, nemit_) ));
+        return Progress(nemit_, std::min(20l, nemit_));
     }
     MultiSolution solve(Rng& gen, Progress* prog = 0) const;
 private:

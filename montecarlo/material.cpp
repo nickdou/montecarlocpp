@@ -38,7 +38,7 @@ Material::Material(const char* disp, const char* relax, double temp)
     ArrayXXd dos(nw_, np_);
     
     omega_ = dispData.col(0);
-    for (unsigned long p = 0; p < np_; p++) {
+    for (long p = 0; p < np_; p++) {
         domega.col(p) = dispData.col(1);
         vel_.col(p) = dispData.col(2+2*p);
         dos.col(p) = dispData.col(3+2*p);
@@ -54,7 +54,7 @@ Material::Material(const char* disp, const char* relax, double temp)
     // Calculate tau
     tau_.resize(nw_, np_);
     tau_.setZero();
-    for (unsigned long p = 0; p < np_; p++) {
+    for (long p = 0; p < np_; p++) {
         ArrayXd tauinv(nw_);
         tauinv.setZero();
         for (int j = 0; j < nscat_; j++) {
@@ -72,7 +72,7 @@ Material::Material(const char* disp, const char* relax, double temp)
     // Calculate dedT
     ArrayXXd dedT(nw_, np_);
     ArrayXd x = HBAR/(KB*T_) * omega_;
-    for (unsigned long w = 0; w < nw_; w++) {
+    for (long w = 0; w < nw_; w++) {
         double val = KB * (std::fabs(x(w)) < Dbl::epsilon() ?
                            1. - x(w)*x(w)/12. :
                            std::pow(x(w) / (2.*std::sinh(x(w)/2.)), 2));
@@ -97,8 +97,8 @@ Material::Material(const char* disp, const char* relax, double temp)
 }
 
 Material::Dist::Dist(const ArrayXXd& pdf) {
-    unsigned long nw = pdf.rows();
-    unsigned long np = pdf.cols();
+    long nw = pdf.rows();
+    long np = pdf.cols();
     
     ArrayXd rowSum = pdf.rowwise().sum();
     double* beg = rowSum.data();
@@ -106,7 +106,7 @@ Material::Dist::Dist(const ArrayXXd& pdf) {
     wDist = DiscreteDist(beg, end);
     
     pDist.reserve(nw);
-    for (unsigned long w = 0; w < nw; w++) {
+    for (long w = 0; w < nw; w++) {
         ArrayXd row = pdf.row(w);
         beg = row.data();
         end = beg + np;

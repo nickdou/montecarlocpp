@@ -30,7 +30,7 @@ class Domain;
 
 class Subdomain {
 protected:
-    typedef Eigen::Matrix<unsigned long, 3, 1> Vector3ul;
+    typedef Eigen::Matrix<long, 3, 1> Vector3l;
     typedef Eigen::Vector3d Vector3d;
     typedef Eigen::Matrix3d Matrix3d;
 public:
@@ -98,7 +98,7 @@ public:
         grid_.accumulate(begin, end, data, quant);
     }
     virtual double sdomVol() const = 0;
-    virtual double cellVol(const Vector3ul& index) const = 0;
+    virtual double cellVol(const Vector3l& index) const = 0;
     virtual const Boundary* advect(Phonon& phn, double& scatDist) const {
         double minDist = scatDist;
         const Boundary* newBdry = 0;
@@ -151,7 +151,7 @@ private:
     typedef fusion::vector6<Back, Left, Bottom, Front, Right, Top> BdryCont;
     BdryCont bdryCont_;
 public:
-    Parallelepiped(const Vector3d& o, const Matrix3d& mat, const Vector3ul& div,
+    Parallelepiped(const Vector3d& o, const Matrix3d& mat, const Vector3l& div,
                    const Vector3d& gradT = Vector3d::Zero(),
                    const double TBack   = 0., const double TLeft  = 0.,
                    const double TBottom = 0., const double TFront = 0.,
@@ -168,14 +168,14 @@ public:
                          "Volume too small, check vector order");
         fusion::for_each(bdryCont_, AddBdryF(this));
     }
-    template<unsigned int I>
+    template<int I>
     typename result_of::at_c<BdryCont, I>::type bdry() {
         return fusion::at_c<I>(bdryCont_);
     }
     double sdomVol() const {
         return grid_.matrix().determinant();
     }
-    double cellVol(const Vector3ul&) const {
+    double cellVol(const Vector3l&) const {
         return grid_.cellVol();
     }
 private:
@@ -188,7 +188,7 @@ private:
 
 class Domain {
 protected:
-    typedef Eigen::Matrix<unsigned long, 3, 1> Vector3ul;
+    typedef Eigen::Matrix<long, 3, 1> Vector3l;
     typedef Eigen::Vector3d Vector3d;
     typedef Eigen::Matrix3d Matrix3d;
 public:
@@ -254,7 +254,7 @@ public:
 private:
     Sdom sdom_;
 public:
-    BulkDomain(const Vector3d& corner, const Vector3ul& div, double deltaT)
+    BulkDomain(const Vector3d& corner, const Vector3l& div, double deltaT)
     : sdom_(Sdom(Vector3d::Zero(), corner.asDiagonal(), div,
                  Vector3d(-deltaT/corner(0), 0., 0.)))
 //                 Vector3d::Zero(), deltaT/2, 0., 0., -deltaT/2., 0., 0.))
@@ -272,7 +272,7 @@ public:
 private:
     Sdom sdom_;
 public:
-    FilmDomain(const Vector3d& corner, const Vector3ul& div, double deltaT)
+    FilmDomain(const Vector3d& corner, const Vector3l& div, double deltaT)
     : sdom_(Sdom(Vector3d::Zero(), corner.asDiagonal(), div,
                  Vector3d(-deltaT/corner(0), 0., 0.)))
 //                 Vector3d::Zero(), deltaT/2, 0., 0., -deltaT/2., 0., 0.))

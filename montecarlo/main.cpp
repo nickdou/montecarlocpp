@@ -38,9 +38,9 @@ int main() {
 //    Material grey("input/grey_disp.txt", "input/grey_relax2.txt", 300.);
     Material si("input/Si_disp.txt", "input/Si_relax2.txt", 300.);
     FilmDomain box(Eigen::Vector3d(2e-6, 2e-8, 2e-6),
-                   Eigen::Matrix<unsigned long, 3, 1>(0, 20, 0),
+                   Eigen::Matrix<long, 3, 1>(0, 20, 0),
                    2.);
-    unsigned long nemit = 100000, maxscat = 100, maxloop = 10000;
+    long nemit = 1000, maxscat = 100, maxloop = 10000;
     
 //    TrajProblem trajProb(&si, &box, maxscat, maxloop);
 //    std::cout << "Seed" << std::endl;
@@ -73,12 +73,12 @@ int main() {
 
 void testScatter(Rng& gen) {
     Material silicon("input/Si_disp.txt", "input/Si_relax2.txt", 300.);
-    const unsigned int N = 100;
+    const int N = 100;
     double scatDist[N];
     double sum = 0;
     Phonon::Prop prop = silicon.drawScatProp(gen);
     std::cout << prop.w() << ' ' << prop.p() << std::endl;
-    for (unsigned int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 100; ++i) {
         scatDist[i] = silicon.drawScatDist(prop, gen);
         std::cout << scatDist[i] << std::endl;
         sum += scatDist[i];

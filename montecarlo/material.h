@@ -26,12 +26,12 @@ private:
         Dist() {}
         Dist(const ArrayXXd& pdf);
         Phonon::Prop drawProp(Rng& gen) const {
-            unsigned long w = wDist(gen);
-            unsigned long p = pDist.at(w)(gen);
+            long w = wDist(gen);
+            long p = pDist.at(w)(gen);
             return Phonon::Prop(w, p);
         }
     };
-    unsigned long np_, nw_;
+    long np_, nw_;
     static const int nscat_ = 2;
     double T_, k_;
     ArrayXd omega_;

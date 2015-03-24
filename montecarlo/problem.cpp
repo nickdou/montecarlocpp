@@ -51,14 +51,14 @@ Trajectory TrajProblem::solve(Rng& gen, Progress* prog) const {
         bdry = e->emitBdry();
     }
     
-    unsigned long maxloop = (maxloop_ != 0 ? maxloop_ : loopFactor_ * maxscat_);
+    long maxloop = (maxloop_ != 0 ? maxloop_ : loopFactor_ * maxscat_);
     double scatDist = mat_->drawScatDist(phn.prop(), gen);
-    for (unsigned long i = 0; i < maxloop; i++) {
+    for (long i = 0; i < maxloop; i++) {
         std::cout << dispBdry(sdom->bdryPtrs(), bdry) << " --> ";
         bdry = sdom->advect(phn, scatDist);
         std::cout << dispBdry(sdom->bdryPtrs(), bdry) << std::endl;
         
-        unsigned long nscatMat = 0;
+        long nscatMat = 0;
         if (bdry) {
             bdry = bdry->scatter(phn, gen);
             sdom = bdry->sdom();
@@ -81,18 +81,18 @@ Field<T> Problem::solveField(const F& functor, M factor,
     const Domain::EmitPtrs& emitPtrs = dom_->emitPtrs();
     double totWeight = std::accumulate(emitPtrs.begin(), emitPtrs.end(),
                                        0., AccumWeightF());
-    std::vector<unsigned long> emitPdf( emitPtrs.size() );
+    std::vector<long> emitPdf( emitPtrs.size() );
     std::transform(emitPtrs.begin(), emitPtrs.end(),
                    emitPdf.begin(), CalcEmitF(totWeight, nemit_));
-    std::vector<unsigned long> emitCdf( emitPtrs.size() );
+    std::vector<long> emitCdf( emitPtrs.size() );
     std::partial_sum(emitPdf.begin(), emitPdf.end(), emitCdf.begin());
-    unsigned long nemit = emitCdf.back();
+    long nemit = emitCdf.back();
     double power = totWeight / nemit * mat_->fluxSum() / 4.;
     
-    unsigned long maxloop = (maxloop_ != 0 ? maxloop_ : loopFactor_ * maxscat_);
+    long maxloop = (maxloop_ != 0 ? maxloop_ : loopFactor_ * maxscat_);
     #pragma omp for schedule(static)
-    for (unsigned long n = 0; n < nemit; ++n) {
-        std::vector<unsigned long>::size_type eIndex;
+    for (long n = 0; n < nemit; ++n) {
+        std::vector<long>::size_type eIndex;
         eIndex = (std::upper_bound(emitCdf.begin(), emitCdf.end(), n) -
                   emitCdf.begin());
         
@@ -103,7 +103,7 @@ Field<T> Problem::solveField(const F& functor, M factor,
         
         double time = 0.;
         double scatDist = mat_->drawScatDist(phn.prop(), gen);
-        for (unsigned long i = 0; i < maxloop; i++) {
+        for (long i = 0; i < maxloop; i++) {
             State before(time, phn.pos());
 //            std::cout << dispBdry(sdom->bdryPtrs(), bdry) << " --> ";
             bdry = sdom->advect(phn, scatDist);
@@ -114,7 +114,7 @@ Field<T> Problem::solveField(const F& functor, M factor,
             sdom->accumulate<T>(before.pos, after.pos, fld[sdom],
                                 phn.sign() * functor(before, after));
             
-            unsigned long nscatMat = 0;
+            long nscatMat = 0;
             if (bdry) {
                 bdry = bdry->scatter(phn, gen);
                 sdom = bdry->sdom();
