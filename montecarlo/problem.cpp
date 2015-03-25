@@ -72,6 +72,71 @@ Trajectory TrajProblem::solve(Rng& gen, Progress* prog) const {
     return Trajectory(this, phn.traj());
 }
 
+struct AccumWeightF {
+    double operator()(double weight, const Emitter* emit) const {
+        return weight + emit->emitWeight();
+    }
+};
+
+struct CalcEmitF {
+    double totWeight_;
+    long nemit_;
+    CalcEmitF(double totWeight, long nemit)
+    : totWeight_(totWeight), nemit_(nemit) {}
+    long operator()(const Emitter* emit) const {
+        double frac = emit->emitWeight() / totWeight_;
+        double rounded = std::ceil(frac * nemit_ - 0.5);
+        return std::max(1l, static_cast<long>(rounded));
+    }
+};
+
+template<typename T, typename M, typename Enable = void>
+struct MultiplyF {
+    void operator()(T& element, const M& multiplier) const {
+        element.array() *= multiplier.array();
+    }
+};
+
+template<typename T, typename M>
+struct MultiplyF<T, M,
+typename boost::enable_if< boost::is_scalar<M> >::type>
+{
+    void operator()(T& element, M multiplier) const {
+        element *= multiplier;
+    }
+};
+
+template<typename T, typename M>
+struct CalcFieldF {
+    M factor_;
+    CalcFieldF(const M& factor) : factor_(factor) {}
+    void operator()(typename Field<T>::value_type& pair) const {
+        const Subdomain* sdom = pair.first;
+        Data<T>& data = pair.second;
+        Collection coll(0,0,0);
+        Eigen::Map<Collection::Vector3s> index(coll.data());
+        MultiplyF<T, M> multiply;
+        typedef typename Data<T>::Size Size;
+        for (Size k = 0; k < data.shape()[2]; ++k) {
+            coll[2] = k;
+            for (Size j = 0; j < data.shape()[1]; ++j) {
+                coll[1] = j;
+                for (Size i = 0; i < data.shape()[0]; ++i) {
+                    coll[0] = i;
+                    multiply(data(coll),
+                             factor_ / sdom->cellVol( index.cast<long>() ));
+                }
+            }
+        }
+    }
+};
+
+struct State {
+    double time;
+    Eigen::Vector3d pos;
+    State(double t, const Eigen::Vector3d& x) : time(t), pos(x) {}
+};
+
 template<typename T, typename F, typename M>
 Field<T> Problem::solveField(const F& functor, M factor,
                              Rng& gen, Progress* prog) const

@@ -200,8 +200,7 @@ public:
 class Subdomain;
 
 template<typename T>
-class Field
-: public std::map< const Subdomain*, Data<T> >
+class Field : public std::map< const Subdomain*, Data<T> >
 //                   std::less<const Subdomain*>,
 //                   typename FieldAlloc<const Subdomain*, T>::type >
 {

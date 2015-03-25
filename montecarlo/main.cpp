@@ -30,43 +30,63 @@ Seed getSeed() {
     return s;
 }
 
-//int main(int argc, const char * argv[]) {
-int main() {
-    Clock clk;
-    std::cout << clk.timestamp() << std::endl;
-    
-//    Material grey("input/grey_disp.txt", "input/grey_relax2.txt", 300.);
-    Material si("input/Si_disp.txt", "input/Si_relax2.txt", 300.);
-    FilmDomain box(Eigen::Vector3d(2e-6, 2e-8, 2e-6),
-                   Eigen::Matrix<long, 3, 1>(0, 20, 0),
-                   2.);
-    long nemit = 1000, maxscat = 100, maxloop = 10000;
-    
-//    TrajProblem trajProb(&si, &box, maxscat, maxloop);
-//    std::cout << "Seed" << std::endl;
-//    Rng gen(getSeed());
-//    std::cout << trajProb.solve(gen) << std::endl;
-    
-//    TempProblem tempProb(&si, &box, nemit, maxscat, maxloop);
-//    FluxProblem fluxProb(&si, &box, Eigen::Vector3d::UnitX(),
-//                         nemit, maxscat, maxloop);
-    MultiProblem multiProb(&si, &box, Eigen::Matrix3d::Identity(),
-                           nemit, maxscat, maxloop);
-    
-    MultiSolution multi(&multiProb);
-    Progress prog = multiProb.initProgress();
+Trajectory trajSolve(const TrajProblem& prob) {
+    std::cout << "Seed" << std::endl;
+    Rng gen(getSeed());
+    return prob.solve(gen);
+}
+
+template<typename P>
+typename P::Sol fieldSolve(const P& prob, const Clock& clk) {
+    typedef typename P::Sol Sol;
+    Sol tot(&prob);
+    Progress prog = prob.initProgress();
     prog.clock(clk);
     std::cout << "Seeds" << std::endl;
     #pragma omp parallel
     {
         Rng gen(getSeed());
-        MultiSolution sol = multiProb.solve(gen, &prog);
+        Sol sol = prob.solve(gen, &prog);
         #pragma omp critical
         {
-            multi += sol;
+            tot += sol;
         }
     }
-    std::cout << multi << std::endl;
+    return tot;
+}
+
+//int main(int argc, const char * argv[]) {
+int main() {
+    Clock clk;
+    std::cout << clk.timestamp() << std::endl;
+    
+//    Material mat("input/grey_disp.txt", "input/grey_relax2.txt", 300.);
+    Material mat("input/Si_disp.txt", "input/Si_relax2.txt", 300.);
+    
+//    FilmDomain dom(Eigen::Vector3d(2e-6, 2e-8, 2e-6),
+//                   Eigen::Matrix<long, 3, 1>(0, 20, 0),
+//                   2.);
+    
+    Eigen::Matrix<double, 5, 1> dim;
+    dim << 2e-8, 2e-8, 2e-8, 2e-8, 2e-8;
+    Eigen::Matrix<long, 5, 1> div;
+    div << 10, 10, 10, 10, 0;
+    TeeDomain dom(dim, div, 3.);
+    
+    long maxscat = 100, maxloop = 10000;
+    
+//    TrajProblem prob(&mat, &dom, maxscat, maxloop);
+//    std::cout << trajSolve(prob) << std::endl;
+    
+    long nemit = 1000;
+    
+//    TempProblem prob(&mat, &dom, nemit, maxscat, maxloop);
+//    FluxProblem prob(&mat, &dom, Eigen::Vector3d::UnitX(),
+//                     nemit, maxscat, maxloop);
+    MultiProblem prob(&mat, &dom, Eigen::Matrix3d::Identity(),
+                      nemit, maxscat, maxloop);
+    
+    std::cout << fieldSolve(prob, clk) << std::endl;
     
     return 0;
 }

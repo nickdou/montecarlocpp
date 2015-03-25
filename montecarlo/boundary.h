@@ -43,15 +43,22 @@ private:
     Plane3d plane_;
 public:
     Boundary() : sdom_(0) {}
-    Boundary(const Subdomain* sdom, const Vector3d& o, const Vector3d& n)
-    : sdom_(sdom), plane_(n.normalized(), o) {}
-    Boundary(const Subdomain* sdom, const Vector3d& o, const Shape& s)
-    : sdom_(sdom), plane_(s.normal(), o) {
+    Boundary(const Vector3d& o, const Vector3d& n)
+    : sdom_(0), plane_(n.normalized(), o) {}
+    Boundary(const Vector3d& o, const Shape& s)
+    : sdom_(0), plane_(s.normal(), o) {
         BOOST_ASSERT_MSG(s.isInit(), "Shape not initialized");
     }
+    Boundary(const Boundary& bdry) : sdom_(0), plane_(bdry.plane_) {}
+    Boundary& operator=(const Boundary& bdry) {
+        sdom_ = 0;
+        plane_ = bdry.plane_;
+        return *this;
+    }
     virtual ~Boundary() {}
-    virtual bool isInit() const { return true; }
+    virtual bool isInit() const { return sdom_ != 0; }
     const Subdomain* sdom() const { return sdom_; }
+    void sdom(const Subdomain* s) { sdom_ = s; }
     Vector3d normal() const { return plane_.normal(); }
     double offset() const { return plane_.offset(); }
     Vector3d projection(const Vector3d& pos) const {
@@ -115,11 +122,10 @@ private:
     Matrix3d refl_;
 public:
     SpecBoundary() : Boundary() {}
-    SpecBoundary(const Subdomain* sdom, const Vector3d& o, const Vector3d& n)
-    : Boundary(sdom, o, n), refl_(reflMatrix(normal())) {}
-    SpecBoundary(const Subdomain* sdom, const Vector3d& o, const Shape& s,
-                 const double T)
-    : Boundary(sdom, o, s), refl_(reflMatrix(normal())) {
+    SpecBoundary(const Vector3d& o, const Vector3d& n)
+    : Boundary(o, n), refl_(reflMatrix(normal())) {}
+    SpecBoundary(const Vector3d& o, const Shape& s, const double T)
+    : Boundary(o, s), refl_(reflMatrix(normal())) {
         BOOST_ASSERT_MSG(T == 0., "Cannot specify temperature");
     }
     const Boundary* scatter(Phonon& phn, Rng&) const {
@@ -133,11 +139,10 @@ private:
     Matrix3d rot_;
 public:
     DiffBoundary() : Boundary() {}
-    DiffBoundary(const Subdomain* sdom, const Vector3d& o, const Vector3d& n)
-    : Boundary(sdom, o, n), rot_(rotMatrix(normal())) {}
-    DiffBoundary(const Subdomain* sdom, const Vector3d& o, const Shape& s,
-                 const double T)
-    : Boundary(sdom, o, s), rot_(rotMatrix(normal())) {
+    DiffBoundary(const Vector3d& o, const Vector3d& n)
+    : Boundary(o, n), rot_(rotMatrix(normal())) {}
+    DiffBoundary(const Vector3d& o, const Shape& s, const double T)
+    : Boundary(o, s), rot_(rotMatrix(normal())) {
         BOOST_ASSERT_MSG(T == 0., "Cannot specify temperature");
     }
     const Boundary* scatter(Phonon& phn, Rng& gen) const {
@@ -149,19 +154,20 @@ public:
 class InterBoundary : public Boundary {
 private:
     const InterBoundary* pair_;
-    InterBoundary& operator=(const InterBoundary&);
 public:
     InterBoundary() : Boundary(), pair_(0) {}
-    InterBoundary(const Subdomain* sdom, const Vector3d& o, const Vector3d& n)
-    : Boundary(sdom, o, n), pair_(0) {}
-    InterBoundary(const Subdomain* sdom, const Vector3d& o, const Shape& s,
-                  const double T)
-    : Boundary(sdom, o, s), pair_(0) {
+    InterBoundary(const Vector3d& o, const Vector3d& n)
+    : Boundary(o, n), pair_(0) {}
+    InterBoundary(const Vector3d& o, const Shape& s, const double T)
+    : Boundary(o, s), pair_(0) {
         BOOST_ASSERT_MSG(T == 0., "Cannot specify temperature");
     }
-    InterBoundary(const InterBoundary& bdry)
-    : Boundary(bdry.sdom(), -bdry.offset()*bdry.normal(), bdry.normal()),
-    pair_(0) {}
+    InterBoundary(const InterBoundary& bdry) : Boundary(bdry), pair_(0) {}
+    InterBoundary& operator=(const InterBoundary& bdry) {
+        Boundary::operator=(bdry);
+        pair_ = 0;
+        return *this;
+    }
     bool isInit() const {
         return Boundary::isInit() && pair_ != 0;
     }
@@ -213,11 +219,10 @@ private:
     Matrix3d rot_;
 public:
     EmitBoundary() : Boundary() {}
-    EmitBoundary(const Subdomain* sdom, const Vector3d& o, const S& s,
-                 const double T)
-    : Boundary(sdom, o, s), o_(o), shape_(s), T_(T),
-    rot_(rotMatrix(normal())) {}
-    bool isInit() const { return Boundary::isInit(); }
+    EmitBoundary(const Vector3d& o, const S& s, const double T)
+    : Boundary(o, s), o_(o), shape_(s), T_(T), rot_(rotMatrix(normal())) {}
+    virtual ~EmitBoundary() {}
+    virtual bool isInit() const { return Boundary::isInit(); }
     const Subdomain* emitSdom() const { return sdom(); }
     const Boundary* emitBdry() const { return this; }
     double emitWeight() const {
@@ -240,9 +245,8 @@ class IsotBoundary : public EmitBoundary<S> {
 private:
     typedef Eigen::Vector3d Vector3d;
 public:
-    IsotBoundary(const Subdomain* sdom, const Vector3d& o, const S& s,
-                 const double T)
-    : EmitBoundary<S>(sdom, o, s, T) {}
+    IsotBoundary(const Vector3d& o, const S& s, const double T)
+    : EmitBoundary<S>(o, s, T) {}
     const Boundary* scatter(Phonon& phn, Rng&) const {
         phn.kill();
         return this;
@@ -255,16 +259,19 @@ private:
     typedef Eigen::Vector3d Vector3d;
     PeriBoundary* pair_;
     Vector3d transl_;
-    PeriBoundary& operator=(const PeriBoundary&);
 public:
-    PeriBoundary(const Subdomain* sdom, const Vector3d& o, const S& s,
-                 const double T)
-    : EmitBoundary<S>(sdom, o, s, T), pair_(0), transl_(Vector3d::Zero()) {}
+    PeriBoundary(const Vector3d& o, const S& s, const double T)
+    : EmitBoundary<S>(o, s, T), pair_(0) {}
     PeriBoundary(const PeriBoundary& bdry)
-    : EmitBoundary<S>(bdry.sdom(), bdry.o_, bdry.shape_, bdry.T_),
-    pair_(0), transl_(Vector3d::Zero()) {}
+    : EmitBoundary<S>(bdry), pair_(0) {}
+    PeriBoundary& operator=(const PeriBoundary& peri) {
+        EmitBoundary<S>::operator=(peri);
+        pair_ = 0;
+        transl_ = Vector3d::Zero();
+        return *this;
+    }
     bool isInit() const {
-        return pair_ != 0;
+        return EmitBoundary<S>::isInit() && pair_ != 0;
     }
     const Boundary* scatter(Phonon& phn, Rng&) const {
         phn.pos(phn.pos() + transl_);

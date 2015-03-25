@@ -6,30 +6,28 @@
 //
 //
 
-#include <Eigen/Core>
 #include <boost/type_traits/is_same.hpp>
-#include <boost/mpl/if.hpp>
-#include <map>
 #include <iostream>
 
-template<typename T>
-struct Vectorizable : boost::is_same<T, Eigen::Vector4d> {};
+struct Solution {
+    static const int i = 0;
+};
 
-template<typename T>
-struct ArrayAlloc
-: boost::mpl::if_< Vectorizable<T>,
-                   Eigen::aligned_allocator<T>,
-                   std::allocator<T> > {};
+struct Problem {};
 
-template<typename K, typename T>
-struct MapAlloc
-: boost::mpl::if_< Vectorizable<T>,
-                   Eigen::aligned_allocator< std::pair<const K, T> >,
-                   std::allocator< std::pair<const K, T> > > {};
+struct ASolution;
+
+struct AProblem : Problem {
+    typedef ASolution Solution;
+};
+
+struct ASolution {
+    static const int i = 1;
+};
 
 int main(int argc, const char * argv[]) {
     using std::cout;
     using std::endl;
-    cout << boost::is_same<ArrayAlloc<Eigen::Vector4d>::type, Eigen::aligned_allocator<Eigen::Vector4d> >::value << endl;
+    cout << AProblem::Solution::i << endl;
     return 0;
 }

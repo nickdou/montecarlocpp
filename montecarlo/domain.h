@@ -40,14 +40,15 @@ private:
     BdryPtrs bdryPtrs_;
     EmitPtrs emitPtrs_;
 protected:
-    void addBdry(const Boundary* bdry) {
+    void addBdry(Boundary* bdry) {
+        bdry->sdom(this);
         bdryPtrs_.push_back(bdry);
     }
     template<typename S>
-    void addBdry(const EmitBoundary<S>* bdry) {
-        addBdry(static_cast<const Boundary*>(bdry));
+    void addBdry(EmitBoundary<S>* bdry) {
+        addBdry(static_cast<Boundary*>(bdry));
         if (bdry->emitWeight() != 0.) {
-            emitPtrs_.push_back(static_cast<const Emitter*>(bdry));
+            emitPtrs_.push_back(static_cast<Emitter*>(bdry));
         }
     }
     friend class AddBdryF;
@@ -57,7 +58,7 @@ protected:
     public:
         AddBdryF(Subdomain* sdom) : sdom_(sdom) {}
         template<typename B>
-        void operator()(const B& bdry) const {
+        void operator()(B& bdry) const {
             sdom_->addBdry(&bdry);
         }
     };
@@ -65,6 +66,11 @@ protected:
 public:
     Subdomain() {}
     Subdomain(const Grid& grid) : grid_(grid) {}
+    Subdomain(const Subdomain& sdom) : grid_(sdom.grid_) {}
+    Subdomain& operator=(const Subdomain& sdom) {
+        grid_ = sdom.grid_;
+        return *this;
+    }
     virtual ~Subdomain() {}
     bool isInit() const {
         if (!grid_.isInit() || bdryPtrs_.size() == 0) {
@@ -129,6 +135,8 @@ public:
     EmitSubdomain() {}
     EmitSubdomain(const Grid& grid, const Vector3d& gradT)
     : Subdomain(grid), gradT_(gradT), rot_(rotMatrix(gradT.normalized())) {}
+    EmitSubdomain(const EmitSubdomain& sdom)
+    : Subdomain(sdom), gradT_(sdom.gradT_), rot_(sdom.rot_) {}
     virtual ~EmitSubdomain() {}
     const Subdomain* emitSdom() const { return this; }
     const Boundary* emitBdry() const { return 0; }
@@ -147,9 +155,15 @@ private:
 template<typename Back, typename Left, typename Bottom,
          typename Front = Back, typename Right = Left, typename Top = Bottom>
 class Parallelepiped : public EmitSubdomain {
-private:
+public:
     typedef fusion::vector6<Back, Left, Bottom, Front, Right, Top> BdryCont;
+private:
     BdryCont bdryCont_;
+    void init() {
+        BOOST_ASSERT_MSG(sdomVol() >= Dbl::min(),
+                         "Volume too small, check vector order");
+        fusion::for_each(bdryCont_, AddBdryF(this));
+    }
 public:
     Parallelepiped(const Vector3d& o, const Matrix3d& mat, const Vector3l& div,
                    const Vector3d& gradT = Vector3d::Zero(),
@@ -157,16 +171,19 @@ public:
                    const double TBottom = 0., const double TFront = 0.,
                    const double TRight  = 0., const double TTop   = 0.)
     : EmitSubdomain(Grid(o, mat, div), gradT), bdryCont_(
-      Back(this, o,            Parallelogram(mat.col(1), mat.col(2)), TBack  ),
-      Left(this, o,            Parallelogram(mat.col(2), mat.col(0)), TLeft  ),
-    Bottom(this, o,            Parallelogram(mat.col(0), mat.col(1)), TBottom),
-     Front(this, o+mat.col(0), Parallelogram(mat.col(2), mat.col(1)), TFront ),
-     Right(this, o+mat.col(1), Parallelogram(mat.col(0), mat.col(2)), TRight ),
-       Top(this, o+mat.col(2), Parallelogram(mat.col(1), mat.col(0)), TTop   ))
+      Back(o,            Parallelogram(mat.col(1), mat.col(2)), TBack  ),
+      Left(o,            Parallelogram(mat.col(2), mat.col(0)), TLeft  ),
+    Bottom(o,            Parallelogram(mat.col(0), mat.col(1)), TBottom),
+     Front(o+mat.col(0), Parallelogram(mat.col(2), mat.col(1)), TFront ),
+     Right(o+mat.col(1), Parallelogram(mat.col(0), mat.col(2)), TRight ),
+       Top(o+mat.col(2), Parallelogram(mat.col(1), mat.col(0)), TTop   ))
     {
-        BOOST_ASSERT_MSG(sdomVol() >= Dbl::min(),
-                         "Volume too small, check vector order");
-        fusion::for_each(bdryCont_, AddBdryF(this));
+        init();
+    }
+    Parallelepiped(const Parallelepiped& para)
+    : EmitSubdomain(para), bdryCont_(para.bdryCont_)
+    {
+        init();
     }
     template<int I>
     typename result_of::at_c<BdryCont, I>::type bdry() {
@@ -220,8 +237,11 @@ protected:
             dom_->addSdom(&sdom);
         }
     };
+private:
+    Domain(const Domain&);
+    Domain& operator=(const Domain&);
 public:
-    Domain() : sdomPtrs_(), emitPtrs_() {}
+    Domain() {}
     virtual ~Domain() {}
     virtual bool isInit() const {
         if (sdomPtrs_.size() == 0) return false;
@@ -255,12 +275,11 @@ private:
     Sdom sdom_;
 public:
     BulkDomain(const Vector3d& corner, const Vector3l& div, double deltaT)
-    : sdom_(Sdom(Vector3d::Zero(), corner.asDiagonal(), div,
-                 Vector3d(-deltaT/corner(0), 0., 0.)))
-//                 Vector3d::Zero(), deltaT/2, 0., 0., -deltaT/2., 0., 0.))
+    : sdom_(Vector3d::Zero(), corner.asDiagonal(), div,
+            Vector3d(-deltaT/corner(0), 0., 0.))
+//            Vector3d::Zero(), deltaT/2, 0., 0., -deltaT/2., 0., 0.)
     {
-        makePair(sdom_.bdry<0>(), sdom_.bdry<3>(),
-                 Vector3d(corner(0), 0., 0.));
+        makePair(sdom_.bdry<0>(), sdom_.bdry<3>(), Vector3d(corner(0), 0., 0.));
         addSdom(&sdom_);
     }
 };
@@ -273,13 +292,64 @@ private:
     Sdom sdom_;
 public:
     FilmDomain(const Vector3d& corner, const Vector3l& div, double deltaT)
-    : sdom_(Sdom(Vector3d::Zero(), corner.asDiagonal(), div,
-                 Vector3d(-deltaT/corner(0), 0., 0.)))
-//                 Vector3d::Zero(), deltaT/2, 0., 0., -deltaT/2., 0., 0.))
+    : sdom_(Vector3d::Zero(), corner.asDiagonal(), div,
+            Vector3d(-deltaT/corner(0), 0., 0.))
+//            Vector3d::Zero(), deltaT/2, 0., 0., -deltaT/2., 0., 0.)
     {
-        makePair(sdom_.bdry<0>(), sdom_.bdry<3>(),
-                 Vector3d(corner(0), 0., 0.));
+        makePair(sdom_.bdry<0>(), sdom_.bdry<3>(), Vector3d(corner(0), 0., 0.));
         addSdom(&sdom_);
+    }
+};
+
+class TeeDomain : public Domain {
+private:
+    typedef Eigen::DiagonalMatrix<double, 3> Diagonal;
+    typedef SpecBoundary Spec;
+    typedef DiffBoundary Diff;
+    typedef InterBoundary Inter;
+    typedef PeriBoundary<Parallelogram> Peri4;
+public:
+    // Back, Left, Bottom, Front, Right, Top
+    typedef fusion::vector4<
+            Parallelepiped<Peri4, Diff,  Spec, Inter, Diff,  Spec>,
+            Parallelepiped<Inter, Spec,  Spec, Inter, Inter, Spec>,
+            Parallelepiped<Diff,  Inter, Spec, Diff,  Spec,  Spec>,
+            Parallelepiped<Inter, Diff,  Spec, Peri4, Diff,  Spec> > SdomCont;
+private:
+    SdomCont sdomCont_;
+    template<int I>
+    struct Sdom : result_of::value_at_c<SdomCont, I> {};
+public:
+    TeeDomain(const Eigen::Matrix<double, 5, 1>& dim,
+              const Eigen::Matrix<long, 5, 1>& div,
+              double deltaT)
+    : sdomCont_(Sdom<0>::type(Vector3d::Zero(),
+                              Diagonal(dim(0), dim(2), dim(4)),
+                              Vector3l(div(0), div(2), div(4)),
+                              Vector3d(-deltaT/(2*dim(0) + dim(1)), 0., 0.)),
+                Sdom<1>::type(Vector3d(dim(0), 0., 0.),
+                              Diagonal(dim(1), dim(2), dim(4)),
+                              Vector3l(div(1), div(2), div(4)),
+                              Vector3d(-deltaT/(2*dim(0) + dim(1)), 0., 0.)),
+                Sdom<2>::type(Vector3d(dim(0), dim(2), 0.),
+                              Diagonal(dim(1), dim(3), dim(4)),
+                              Vector3l(div(1), div(3), div(4)),
+                              Vector3d(-deltaT/(2*dim(0) + dim(1)), 0., 0.)),
+                Sdom<3>::type(Vector3d(dim(0) + dim(1), 0., 0.),
+                              Diagonal(dim(0), dim(2), dim(4)),
+                              Vector3l(div(0), div(2), div(4)),
+                              Vector3d(-deltaT/(2*dim(0) + dim(1)), 0., 0.)))
+    {
+        makePair(sdom<0>().bdry<0>(), sdom<3>().bdry<3>(),
+                 Vector3d(2*dim(0) + dim(1), 0., 0.));
+        makePair(sdom<0>().bdry<3>(), sdom<1>().bdry<0>());
+        makePair(sdom<1>().bdry<4>(), sdom<2>().bdry<1>());
+        makePair(sdom<1>().bdry<3>(), sdom<3>().bdry<0>());
+        fusion::for_each(sdomCont_, AddSdomF(this));
+    }
+    template<int I>
+    typename result_of::at_c<SdomCont, I>::type sdom() {
+        return fusion::at_c<I>(sdomCont_);
     }
 };
 
