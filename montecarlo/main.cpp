@@ -78,7 +78,7 @@ int main() {
 //    TrajProblem prob(&mat, &dom, maxscat, maxloop);
 //    std::cout << trajSolve(prob) << std::endl;
     
-    long nemit = 1000;
+    long nemit = 10000000;
     
 //    TempProblem prob(&mat, &dom, nemit, maxscat, maxloop);
 //    FluxProblem prob(&mat, &dom, Eigen::Vector3d::UnitX(),

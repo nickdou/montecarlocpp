@@ -245,6 +245,7 @@ class IsotBoundary : public EmitBoundary<S> {
 private:
     typedef Eigen::Vector3d Vector3d;
 public:
+    IsotBoundary() : EmitBoundary<S>() {}
     IsotBoundary(const Vector3d& o, const S& s, const double T)
     : EmitBoundary<S>(o, s, T) {}
     const Boundary* scatter(Phonon& phn, Rng&) const {
@@ -260,6 +261,7 @@ private:
     PeriBoundary* pair_;
     Vector3d transl_;
 public:
+    PeriBoundary() : EmitBoundary<S>(), pair_(0) {}
     PeriBoundary(const Vector3d& o, const S& s, const double T)
     : EmitBoundary<S>(o, s, T), pair_(0) {}
     PeriBoundary(const PeriBoundary& bdry)

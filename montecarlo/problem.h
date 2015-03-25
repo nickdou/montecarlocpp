@@ -197,9 +197,9 @@ private:
     const TrajProblem* prob_;
     Eigen::ArrayXXd arr_;
 public:
-    Trajectory() : prob_(0), arr_() {}
+    Trajectory() : Solution(), prob_(0), arr_() {}
     Trajectory(const TrajProblem* prob, const TrkPhonon::Traj& traj)
-    : prob_(prob), arr_(traj.size(), 3)
+    : Solution(), prob_(prob), arr_(traj.size(), 3)
     {
         Eigen::ArrayXXd::Index i = 0;
         for (TrkPhonon::Traj::const_iterator x = traj.begin(); x != traj.end();
@@ -239,12 +239,12 @@ private:
     const TempProblem* prob_;
     Field<double> fld_;
 public:
-    Temperature() : prob_(0), fld_() {}
+    Temperature() : Solution(), prob_(0), fld_() {}
     Temperature(const TempProblem* prob)
-    : prob_(prob), fld_(prob->initField<double>())
+    : Solution(), prob_(prob), fld_(prob->initField<double>())
     {}
     Temperature(const TempProblem* prob, const Field<double>& fld)
-    : prob_(prob), fld_(fld)
+    : Solution(), prob_(prob), fld_(fld)
     {}
     const TempProblem* problem() const { return prob_; }
     Temperature& operator+=(const Temperature& temp) {
@@ -287,12 +287,12 @@ private:
     const FluxProblem* prob_;
     Field<double> fld_;
 public:
-    Flux() : prob_(0), fld_() {}
+    Flux() : Solution(), prob_(0), fld_() {}
     Flux(const FluxProblem* prob)
-    : prob_(prob), fld_(prob->initField<double>())
+    : Solution(), prob_(prob), fld_(prob->initField<double>())
     {}
     Flux(const FluxProblem* prob, const Field<double>& fld)
-    : prob_(prob), fld_(fld)
+    : Solution(), prob_(prob), fld_(fld)
     {}
     const FluxProblem* problem() const { return prob_; }
     Flux& operator+=(const Flux& flux) {
@@ -338,12 +338,12 @@ private:
     const MultiProblem* prob_;
     Field<Eigen::Vector4d> fld_;
 public:
-    MultiSolution() : prob_(0), fld_() {}
+    MultiSolution() : Solution(), prob_(0), fld_() {}
     MultiSolution(const MultiProblem* prob)
-    : prob_(prob), fld_(prob->initField<Eigen::Vector4d>())
+    : Solution(), prob_(prob), fld_(prob->initField<Eigen::Vector4d>())
     {}
     MultiSolution(const MultiProblem* prob, const Field<Eigen::Vector4d>& fld)
-    : prob_(prob), fld_(fld)
+    : Solution(), prob_(prob), fld_(fld)
     {}
     const MultiProblem* problem() const { return prob_; }
     MultiSolution& operator+=(const MultiSolution& multi) {

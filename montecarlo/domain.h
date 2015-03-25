@@ -132,7 +132,7 @@ private:
     Vector3d gradT_;
     Matrix3d rot_;
 public:
-    EmitSubdomain() {}
+    EmitSubdomain() : Subdomain() {}
     EmitSubdomain(const Grid& grid, const Vector3d& gradT)
     : Subdomain(grid), gradT_(gradT), rot_(rotMatrix(gradT.normalized())) {}
     EmitSubdomain(const EmitSubdomain& sdom)
@@ -165,6 +165,7 @@ private:
         fusion::for_each(bdryCont_, AddBdryF(this));
     }
 public:
+    Parallelepiped() : EmitSubdomain() {}
     Parallelepiped(const Vector3d& o, const Matrix3d& mat, const Vector3l& div,
                    const Vector3d& gradT = Vector3d::Zero(),
                    const double TBack   = 0., const double TLeft  = 0.,
@@ -274,6 +275,7 @@ public:
 private:
     Sdom sdom_;
 public:
+    BulkDomain() : Domain() {}
     BulkDomain(const Vector3d& corner, const Vector3l& div, double deltaT)
     : sdom_(Vector3d::Zero(), corner.asDiagonal(), div,
             Vector3d(-deltaT/corner(0), 0., 0.))
@@ -291,6 +293,7 @@ public:
 private:
     Sdom sdom_;
 public:
+    FilmDomain() : Domain() {}
     FilmDomain(const Vector3d& corner, const Vector3l& div, double deltaT)
     : sdom_(Vector3d::Zero(), corner.asDiagonal(), div,
             Vector3d(-deltaT/corner(0), 0., 0.))
@@ -320,6 +323,7 @@ private:
     template<int I>
     struct Sdom : result_of::value_at_c<SdomCont, I> {};
 public:
+    TeeDomain() : Domain() {}
     TeeDomain(const Eigen::Matrix<double, 5, 1>& dim,
               const Eigen::Matrix<long, 5, 1>& div,
               double deltaT)
