@@ -8,13 +8,10 @@
 
 #include <Eigen/Core>
 #include <iostream>
-#include <limits>
-
-using std::cout;
-using std::endl;
 
 int main(int argc, const char * argv[]) {
-    Eigen::Array4d a(0.,1.,2.,3.);
-    cout << std::numeric_limits<double>::epsilon() << endl;
+    using std::cout;
+    using std::endl;
+    cout << Eigen::Vector3d::UnitX() / 2. << endl;
     return 0;
 }

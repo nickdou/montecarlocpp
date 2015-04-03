@@ -65,9 +65,9 @@ public:
 
 class TrkPhonon : public Phonon {
 public:
-    typedef std::vector<Vector3d> Traj;
+    typedef Eigen::Array<double, Eigen::Dynamic, 3> Trajectory;
 private:
-    Traj traj_;
+    std::vector<Vector3d> traj_;
 public:
     TrkPhonon() : Phonon() {}
     TrkPhonon(const Prop& p, const Vector3d& pos, const Vector3d& dir, bool s) :
@@ -78,11 +78,19 @@ public:
         traj_.push_back(phn.pos());
     }
     ~TrkPhonon() {}
-    const Traj& traj() { return traj_; }
     const Vector3d& pos() const { return Phonon::pos(); }
     void pos(const Vector3d& newPos) {
         Phonon::pos(newPos);
         traj_.push_back(newPos);
+    }
+    Trajectory trajectory() const {
+        Trajectory arr(traj_.size(), 3);
+        Trajectory::Index i = 0;
+        for (std::vector<Vector3d>::const_iterator x = traj_.begin();
+             x != traj_.end(); ++x) {
+            arr.row(i++) = *x;
+        }
+        return arr;
     }
 };
 

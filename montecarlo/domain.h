@@ -18,10 +18,13 @@
 #include <Eigen/Core>
 #include <boost/fusion/algorithm/iteration.hpp>
 #include <boost/fusion/sequence/intrinsic.hpp>
-#include <boost/fusion/container/vector.hpp>
+#include <boost/fusion/container/vector/vector40.hpp>
+#include <boost/fusion/container/vector/vector10.hpp>
 #include <boost/assert.hpp>
-#include <deque>
 #include <vector>
+#include <iostream>
+#include <sstream>
+#include <string>
 
 namespace fusion = boost::fusion;
 namespace result_of = boost::fusion::result_of;
@@ -94,8 +97,8 @@ public:
     const BdryPtrs& bdryPtrs() const { return bdryPtrs_; }
     const EmitPtrs& emitPtrs() const { return emitPtrs_; }
     template<typename T>
-    Data<T> initData() const {
-        return Data<T>( Collection(grid_.shape().cwiseMax(1)) );
+    Data<T> initData(const T& value) const {
+        return Data<T>( Collection(grid_.shape().cwiseMax(1)), value );
     }
     template<typename T>
     void accumulate(const Vector3d& begin, const Vector3d& end,
@@ -138,7 +141,9 @@ public:
     EmitSubdomain(const EmitSubdomain& sdom)
     : Subdomain(sdom), gradT_(sdom.gradT_), rot_(sdom.rot_) {}
     virtual ~EmitSubdomain() {}
-    const Subdomain* emitSdom() const { return this; }
+    const Subdomain* emitSdom() const {
+        return this;
+    }
     const Boundary* emitBdry() const { return 0; }
     double emitWeight() const {
         return 2 * sdomVol() * gradT_.norm();
@@ -209,9 +214,14 @@ protected:
     typedef Eigen::Matrix<long, 3, 1> Vector3l;
     typedef Eigen::Vector3d Vector3d;
     typedef Eigen::Matrix3d Matrix3d;
+    typedef Eigen::DiagonalMatrix<double, 3> Diagonal;
+    typedef SpecBoundary Spec;
+    typedef DiffBoundary Diff;
+    typedef InterBoundary Inter;
+    typedef PeriBoundary<Parallelogram> Peri4;
 public:
     typedef std::vector<const Subdomain*> SdomPtrs;
-    typedef std::deque<const Emitter*> EmitPtrs;
+    typedef std::vector<const Emitter*> EmitPtrs;
 private:
     SdomPtrs sdomPtrs_;
     EmitPtrs emitPtrs_;
@@ -222,10 +232,10 @@ protected:
                          sdom->emitPtrs().end());
     }
     void addSdom(const EmitSubdomain* sdom) {
-        addSdom(static_cast<const Subdomain*>(sdom));
         if (sdom->emitWeight() != 0.) {
-            emitPtrs_.push_front(static_cast<const Emitter*>(sdom));
+            emitPtrs_.push_back(static_cast<const Emitter*>(sdom));
         }
+        addSdom(static_cast<const Subdomain*>(sdom));
     }
     friend class AddSdomF;
     class AddSdomF {
@@ -238,6 +248,7 @@ protected:
             dom_->addSdom(&sdom);
         }
     };
+    std::string info_;
 private:
     Domain(const Domain&);
     Domain& operator=(const Domain&);
@@ -266,53 +277,71 @@ public:
     }
     const SdomPtrs& sdomPtrs() const { return sdomPtrs_; }
     const EmitPtrs& emitPtrs() const { return emitPtrs_; }
+    virtual Eigen::Matrix<double, 3, Eigen::Dynamic> centers() const = 0;
+    friend std::ostream& operator<<(std::ostream& os, const Domain& dom) {
+        return os << dom.info_;
+    }
 };
 
 class BulkDomain : public Domain {
 public:
-    typedef Parallelepiped< PeriBoundary<Parallelogram>,
-                            SpecBoundary, SpecBoundary > Sdom;
+    typedef Parallelepiped<Peri4, Spec, Spec> Sdom;
 private:
     Sdom sdom_;
+    Vector3d center_;
 public:
     BulkDomain() : Domain() {}
     BulkDomain(const Vector3d& corner, const Vector3l& div, double deltaT)
     : sdom_(Vector3d::Zero(), corner.asDiagonal(), div,
-            Vector3d(-deltaT/corner(0), 0., 0.))
-//            Vector3d::Zero(), deltaT/2, 0., 0., -deltaT/2., 0., 0.)
+            Vector3d(-deltaT/corner(0), 0., 0.)),
+//            Vector3d::Zero(), deltaT/2, 0., 0., -deltaT/2., 0., 0.),
+    center_(0.5*corner)
     {
+        std::ostringstream ss;
+        ss << "BulkDomain " << static_cast<Domain*>(this) << std::endl;
+        ss << "  dim: " << corner.transpose() << std::endl;
+        ss << "  div: " << div.transpose() << std::endl;
+        ss << "  dT:  " << deltaT;
+        info_ = ss.str();
+        
         makePair(sdom_.bdry<0>(), sdom_.bdry<3>(), Vector3d(corner(0), 0., 0.));
         addSdom(&sdom_);
+    }
+    Eigen::Matrix<double, 3, Eigen::Dynamic> centers() const {
+        return center_;
     }
 };
 
 class FilmDomain : public Domain {
 public:
-    typedef Parallelepiped< PeriBoundary<Parallelogram>,
-                            DiffBoundary, SpecBoundary > Sdom;
+    typedef Parallelepiped<Peri4, Diff, Spec> Sdom;
 private:
     Sdom sdom_;
+    Vector3d center_;
 public:
     FilmDomain() : Domain() {}
     FilmDomain(const Vector3d& corner, const Vector3l& div, double deltaT)
     : sdom_(Vector3d::Zero(), corner.asDiagonal(), div,
-            Vector3d(-deltaT/corner(0), 0., 0.))
-//            Vector3d::Zero(), deltaT/2, 0., 0., -deltaT/2., 0., 0.)
+            Vector3d(-deltaT/corner(0), 0., 0.)),
+    center_(0.5*corner)
     {
+        std::ostringstream ss;
+        ss << "FilmDomain " << static_cast<Domain*>(this) << std::endl;
+        ss << "  dim: " << corner.transpose() << std::endl;
+        ss << "  div: " << div.transpose() << std::endl;
+        ss << "  dT:  " << deltaT;
+        info_ = ss.str();
+        
         makePair(sdom_.bdry<0>(), sdom_.bdry<3>(), Vector3d(corner(0), 0., 0.));
         addSdom(&sdom_);
+    }
+    Eigen::Matrix<double, 3, Eigen::Dynamic> centers() const {
+        return center_;
     }
 };
 
 class TeeDomain : public Domain {
-private:
-    typedef Eigen::DiagonalMatrix<double, 3> Diagonal;
-    typedef SpecBoundary Spec;
-    typedef DiffBoundary Diff;
-    typedef InterBoundary Inter;
-    typedef PeriBoundary<Parallelogram> Peri4;
 public:
-    // Back, Left, Bottom, Front, Right, Top
     typedef fusion::vector4<
             Parallelepiped<Peri4, Diff,  Spec, Inter, Diff,  Spec>,
             Parallelepiped<Inter, Spec,  Spec, Inter, Inter, Spec>,
@@ -320,40 +349,105 @@ public:
             Parallelepiped<Inter, Diff,  Spec, Peri4, Diff,  Spec> > SdomCont;
 private:
     SdomCont sdomCont_;
+    Eigen::Matrix<double, 4, 3> centers_;
     template<int I>
     struct Sdom : result_of::value_at_c<SdomCont, I> {};
 public:
     TeeDomain() : Domain() {}
     TeeDomain(const Eigen::Matrix<double, 5, 1>& dim,
               const Eigen::Matrix<long, 5, 1>& div,
-              double deltaT)
-    : sdomCont_(Sdom<0>::type(Vector3d::Zero(),
-                              Diagonal(dim(0), dim(2), dim(4)),
-                              Vector3l(div(0), div(2), div(4)),
-                              Vector3d(-deltaT/(2*dim(0) + dim(1)), 0., 0.)),
-                Sdom<1>::type(Vector3d(dim(0), 0., 0.),
-                              Diagonal(dim(1), dim(2), dim(4)),
-                              Vector3l(div(1), div(2), div(4)),
-                              Vector3d(-deltaT/(2*dim(0) + dim(1)), 0., 0.)),
-                Sdom<2>::type(Vector3d(dim(0), dim(2), 0.),
-                              Diagonal(dim(1), dim(3), dim(4)),
-                              Vector3l(div(1), div(3), div(4)),
-                              Vector3d(-deltaT/(2*dim(0) + dim(1)), 0., 0.)),
-                Sdom<3>::type(Vector3d(dim(0) + dim(1), 0., 0.),
-                              Diagonal(dim(0), dim(2), dim(4)),
-                              Vector3l(div(0), div(2), div(4)),
-                              Vector3d(-deltaT/(2*dim(0) + dim(1)), 0., 0.)))
-    {
-        makePair(sdom<0>().bdry<0>(), sdom<3>().bdry<3>(),
-                 Vector3d(2*dim(0) + dim(1), 0., 0.));
-        makePair(sdom<0>().bdry<3>(), sdom<1>().bdry<0>());
-        makePair(sdom<1>().bdry<4>(), sdom<2>().bdry<1>());
-        makePair(sdom<1>().bdry<3>(), sdom<3>().bdry<0>());
-        fusion::for_each(sdomCont_, AddSdomF(this));
-    }
+              double deltaT);
     template<int I>
     typename result_of::at_c<SdomCont, I>::type sdom() {
         return fusion::at_c<I>(sdomCont_);
+    }
+    Eigen::Matrix<double, 3, Eigen::Dynamic> centers() const {
+        return centers_.transpose();
+    }
+};
+
+class TubeDomain : public Domain {
+public:
+    typedef fusion::vector3<
+    Parallelepiped<Peri4, Diff,  Spec,  Peri4, Diff,  Inter>,
+    Parallelepiped<Peri4, Inter, Inter, Peri4, Diff,  Diff >,
+    Parallelepiped<Peri4, Spec,  Diff,  Peri4, Inter, Diff > > SdomCont;
+private:
+    SdomCont sdomCont_;
+    Eigen::Matrix<double, 3, 3> centers_;
+    template<int I>
+    struct Sdom : result_of::value_at_c<SdomCont, I> {};
+public:
+    TubeDomain() : Domain() {}
+    TubeDomain(const Eigen::Matrix<double, 4, 1>& dim,
+               const Eigen::Matrix<long, 4, 1>& div,
+               double deltaT);
+    template<int I>
+    typename result_of::at_c<SdomCont, I>::type sdom() {
+        return fusion::at_c<I>(sdomCont_);
+    }
+    Eigen::Matrix<double, 3, Eigen::Dynamic> centers() const {
+        return centers_.transpose();
+    }
+};
+
+class OctetDomain : public Domain {
+public:
+    typedef fusion::vector33<
+    Parallelepiped<Diff,  Spec,  Peri4, Diff,  Inter, Diff >, // 00
+    Parallelepiped<Diff,  Inter, Peri4, Inter, Diff,  Diff >, // 01
+    Parallelepiped<Inter, Diff,  Peri4, Inter, Diff,  Inter>, // 02
+    Parallelepiped<Inter, Diff,  Peri4, Inter, Diff,  Inter>, // 03
+    Parallelepiped<Inter, Diff,  Peri4, Inter, Diff,  Inter>, // 04
+    Parallelepiped<Inter, Inter, Peri4, Diff,  Diff,  Inter>, // 05
+    Parallelepiped<Diff,  Spec,  Peri4, Diff,  Inter, Inter>, // 06
+    
+    Parallelepiped<Spec,  Diff,  Inter, Inter, Inter, Diff >, // 07
+    Parallelepiped<Inter, Diff,  Inter, Inter, Inter, Inter>, // 08
+    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Inter>, // 09
+    Parallelepiped<Inter, Inter, Inter, Diff,  Diff,  Inter>, // 10
+    Parallelepiped<Diff,  Spec,  Inter, Diff,  Inter, Inter>, // 11
+    Parallelepiped<Spec,  Inter, Diff,  Inter, Spec,  Diff >, // 12
+    Parallelepiped<Inter, Inter, Diff,  Diff,  Spec,  Inter>, // 13
+    
+    Parallelepiped<Diff,  Diff,  Inter, Inter, Inter, Inter>, // 14
+    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Inter>, // 15
+    Parallelepiped<Inter, Inter, Inter, Diff,  Diff,  Inter>, // 16
+    Parallelepiped<Diff,  Spec,  Inter, Diff,  Inter, Inter>, // 17
+    Parallelepiped<Diff,  Inter, Inter, Diff,  Spec,  Inter>, // 18
+    
+    Parallelepiped<Spec,  Diff,  Diff , Inter, Inter, Inter>, // 19
+    Parallelepiped<Inter, Diff,  Inter, Inter, Inter, Inter>, // 20
+    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Inter>, // 21
+    Parallelepiped<Inter, Inter, Inter, Diff,  Diff,  Inter>, // 22
+    Parallelepiped<Diff,  Spec,  Inter, Diff,  Inter, Inter>, // 23
+    Parallelepiped<Spec,  Inter, Diff,  Inter, Spec,  Diff >, // 24
+    Parallelepiped<Inter, Inter, Inter, Diff,  Spec,  Diff >, // 25
+    
+    Parallelepiped<Diff,  Spec,  Diff,  Diff,  Inter, Peri4>, // 26
+    Parallelepiped<Diff,  Inter, Diff,  Inter, Diff,  Peri4>, // 27
+    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Peri4>, // 28
+    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Peri4>, // 29
+    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Peri4>, // 30
+    Parallelepiped<Inter, Inter, Inter, Diff,  Diff,  Peri4>, // 31
+    Parallelepiped<Diff,  Spec,  Inter, Diff,  Inter, Peri4>  // 32
+    > SdomCont;
+private:
+    SdomCont sdomCont_;
+    Eigen::Matrix<double, Eigen::Dynamic, 3> centers_;
+    template<int I>
+    struct Sdom : result_of::value_at_c<SdomCont, I> {};
+public:
+    OctetDomain() : Domain() {}
+    OctetDomain(const Eigen::Matrix<double, 5, 1>& dim,
+                const Eigen::Matrix<long, 5, 1>& div,
+                double deltaT);
+    template<int I>
+    typename result_of::at_c<SdomCont, I>::type sdom() {
+        return fusion::at_c<I>(sdomCont_);
+    }
+    Eigen::Matrix<double, 3, Eigen::Dynamic> centers() const {
+        return centers_.transpose();
     }
 };
 

@@ -14,6 +14,8 @@
 #include "random.h"
 #include <Eigen/Core>
 #include <vector>
+#include <iostream>
+#include <string>
 
 class Material {
 private:
@@ -38,9 +40,11 @@ private:
     ArrayXXd tau_, vel_;
     Dist energyDist_, fluxDist_, scatDist_;
     double energySum_, fluxSum_, scatSum_;
+    std::string info_;
 public:
+    Material() {}
     Material(const char* disp, const char* relax, double temp);
-    double tempRef() const { return T_; }
+    double temp() const { return T_; }
     double cond() const { return k_; }
     double vel(const Phonon::Prop& prop) const {
         return vel_(prop.w(), prop.p());
@@ -66,6 +70,9 @@ public:
         phn.prop(drawScatProp(gen));
         phn.dir<true>(drawIso(gen));
         return drawScatDist(phn.prop(), gen);
+    }
+    friend std::ostream& operator<<(std::ostream& os, const Material& mat) {
+        return os << mat.info_;
     }
 };
 

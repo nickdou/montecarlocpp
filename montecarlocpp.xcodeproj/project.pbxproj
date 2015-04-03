@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		5F317C441A9684B5002A54E4 /* a.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5F317C421A9684B5002A54E4 /* a.cpp */; };
+		5F4D7B551ACDB732000D984C /* domain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5FA874FA1A84018A009E2F71 /* domain.cpp */; };
 		5F956F541A72045F003CD158 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5F956F531A72045F003CD158 /* main.cpp */; };
 		5F956F5F1A733E22003CD158 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5F956F5E1A733E22003CD158 /* main.cpp */; };
 		5FACF6721A9D1E6100F76CED /* libboost_random.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5FACF6711A9D1E6100F76CED /* libboost_random.a */; };
@@ -65,6 +66,7 @@
 		5F317C431A9684B5002A54E4 /* a.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = a.h; sourceTree = "<group>"; };
 		5F3BBDBC1A96DB350003B8BC /* problem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = problem.cpp; sourceTree = "<group>"; };
 		5F3BBDBD1A96DB350003B8BC /* problem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = problem.h; sourceTree = "<group>"; };
+		5F4D7B581ACE5084000D984C /* debug.log */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = debug.log; sourceTree = "<group>"; };
 		5F956F501A72045F003CD158 /* hello */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = hello; sourceTree = BUILT_PRODUCTS_DIR; };
 		5F956F531A72045F003CD158 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		5F956F5C1A733E22003CD158 /* eigen */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = eigen; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -132,6 +134,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		5F4D7B571ACE5084000D984C /* output */ = {
+			isa = PBXGroup;
+			children = (
+				5F4D7B581ACE5084000D984C /* debug.log */,
+			);
+			path = output;
+			sourceTree = "<group>";
+		};
 		5F956F511A72045F003CD158 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -188,6 +198,7 @@
 		5FF27DE01A781F50001ACEF9 /* montecarlo */ = {
 			isa = PBXGroup;
 			children = (
+				5F4D7B571ACE5084000D984C /* output */,
 				5FE18E761AC1324000FD011D /* input */,
 				5FF27DE11A781F50001ACEF9 /* main.cpp */,
 				5F3BBDBD1A96DB350003B8BC /* problem.h */,
@@ -360,6 +371,7 @@
 				5FC066BC1AA09BED000CB122 /* main.cpp in Sources */,
 				5FF27DF31A782030001ACEF9 /* material.cpp in Sources */,
 				5FC066BD1AA0A747000CB122 /* problem.cpp in Sources */,
+				5F4D7B551ACDB732000D984C /* domain.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -531,6 +543,7 @@
 		5FA9881B1A71FBA500365690 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_PREPROCESSOR_DEFINITIONS = DEBUG;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
@@ -543,6 +556,7 @@
 		5FA9881C1A71FBA500365690 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_PREPROCESSOR_DEFINITIONS = "";
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,

@@ -14,13 +14,20 @@
 #include <boost/assert.hpp>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <limits>
 #include <cmath>
 
 const int Material::nscat_;
 
-Material::Material(const char* disp, const char* relax, double temp)
-: T_(temp) {
+Material::Material(const char* disp, const char* relax, double temp) : T_(temp)
+{
+    std::ostringstream ss;
+    ss << "Material " << this << std::endl;
+    ss << "  disp:  " << disp << std::endl;
+    ss << "  relax: " << relax << std::endl;
+    ss << "  temp:  " << temp;
+    info_ = ss.str();
     
     // Read dispersion file
     std::ifstream dispFile(disp);

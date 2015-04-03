@@ -15,20 +15,33 @@
 #include <Eigen/Core>
 #include <boost/assert.hpp>
 #include <map>
+#include <iomanip>
+#include <sstream>
 #include <iostream>
+#include <stdexcept>
+#include <exception>
 #include <cmath>
+
 
 class Grid {
 protected:
     typedef Eigen::Matrix<long, 3, 1> Vector3l;
     typedef Eigen::Vector3d Vector3d;
     typedef Eigen::Matrix3d Matrix3d;
+public:
+    class OutOfRange : public std::runtime_error {
+    public:
+        explicit OutOfRange(const char* msg)
+        : std::runtime_error(msg) {}
+        explicit OutOfRange(const std::stringstream& stream)
+        : std::runtime_error(stream.str()) {}
+    };
 private:
     Vector3d o_;
     Matrix3d mat_, inv_;
     Vector3l div_, max_;
     double vol_;
-    int dim_;
+    int dim_, dir_;
     int findDir() const {
         Vector3l::Index d;
         div_.maxCoeff(&d);
@@ -39,18 +52,23 @@ private:
     Vector3d getCoord(const Vector3d& pos) const {
         Vector3d norm = inv_ * (pos - o_);
         if (Check) {
-            static const double margin = 3*Dbl::epsilon();
+            static const double margin = 100*Dbl::epsilon();
             bool isInside = (norm.array() >= -margin).all() &&
                             (norm.array() <= 1. + margin).all();
             if(!isInside) {
-                using std::cout;
-                using std::endl;
-                cout << pos.transpose() << endl;
-                cout << norm.transpose() << endl;
-                cout << norm.transpose().array() / Dbl::epsilon() << endl;
-                cout << (1. - norm.transpose().array()) / Dbl::epsilon() << endl;
+#pragma omp critical
+                {
+                    std::stringstream what;
+                    Eigen::Matrix<double, 3, 4> output;
+                    output << pos, norm, norm / Dbl::epsilon(),
+                              (Vector3d::Ones() - norm) / Dbl::epsilon();
+                    Eigen::IOFormat fmt(9, 16);
+                    what << "Point outside of grid" << std::endl;
+                    what << output.transpose().format(fmt);
+                    throw(OutOfRange(what));
+                }
             }
-            BOOST_ASSERT_MSG(isInside, "Point outside of grid");
+            
         }
         return div_.cast<double>().cwiseProduct(norm);
     }
@@ -67,8 +85,9 @@ public:
     : o_(o), mat_(mat), inv_(mat.inverse()),
     div_(div), max_(div.cwiseMax(1) - Vector3l::Ones()),
     vol_(mat.determinant() / div.cwiseMax(1).prod()),
-    dim_(static_cast<int>( (div.array() > 0).count() ))
+    dim_(static_cast<int>( (div.array() > 0).count() )), dir_(0)
     {
+        if (dim_ == 1) dir_ = findDir();
         BOOST_ASSERT_MSG(dim_ <= 3, "Dimensionality must be between 0 and 3");
         BOOST_ASSERT_MSG(std::abs(vol_) >= Dbl::min(),
                          "Grid matrix is singular");
@@ -95,31 +114,37 @@ public:
         Vector3l eIndex = getIndex(eCoord);
         
         if (dim_ == 1) {
-            static int d = findDir();
-            long b = bIndex(d);
-            long e = eIndex(d);
+            long b = bIndex(dir_);
+            long e = eIndex(dir_);
             Collection bColl(0,0,0);
             Collection eColl(0,0,0);
-            bColl[d] = b;
-            eColl[d] = e;
+            bColl[dir_] = b;
+            eColl[dir_] = e;
+            switch (b) {
+                case 0: break;
+                case 1: break;
+                case 2: break;
+                case 3: break;
+                default: break;
+            }
             if (b == e) {
                 data(bColl) += quant;
                 return;
             }
-            T cellQuant = quant / std::abs(dCoord(d));
+            T cellQuant = quant / std::abs(dCoord(dir_));
             int pm;
             if (b < e) {
-                data(bColl) += cellQuant * (1 + b - bCoord(d));
-                data(eColl) += cellQuant * (eCoord(d) - e);
+                data(bColl) += cellQuant * (1 + b - bCoord(dir_));
+                data(eColl) += cellQuant * (eCoord(dir_) - e);
                 pm = 1;
             } else {
-                data(bColl) += cellQuant * (bCoord(d) - b);
-                data(eColl) += cellQuant * (1 + e - eCoord(d));
+                data(bColl) += cellQuant * (bCoord(dir_) - b);
+                data(eColl) += cellQuant * (1 + e - eCoord(dir_));
                 pm = -1;
             }
             Collection iColl(0,0,0);
             for (long i = b + pm; i != e; i += pm) {
-                iColl[d] = i;
+                iColl[dir_] = i;
                 data(iColl) += cellQuant;
             }
             return;
@@ -148,8 +173,16 @@ public:
                 bool search = !borderMap.empty();
                 for (long i = b; i != e; i += pm) {
                     double param = (i - bCoord(d)) / dCoord(d);
-                    BOOST_ASSERT_MSG(param >= 0. && param <= 1.,
-                                     "Parameter out of range");
+                    if (param < 0. || param > 1.) {
+#pragma omp critical
+                        {
+                            std::stringstream what;
+                            what << "Parameter out of range" << std::endl;
+                            what << std::setprecision(9) << std::setw(16);
+                            what << param;
+                            throw(OutOfRange(what));
+                        }
+                    }
                     if (search) {
                         Map::iterator found = borderMap.find(param);
                         if (found != borderMap.end()) {
@@ -171,8 +204,6 @@ public:
                 data( Collection(index) ) += quant * (border->first - param);
                 param = border->first;
                 index += border->second;
-//                index = (index.cast<long>() +
-//                         border->second).cast<unsigned long>();
             }
             BOOST_ASSERT_MSG(index == eIndex, "Final index incorrect");
         }
