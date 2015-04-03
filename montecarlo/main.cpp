@@ -16,9 +16,7 @@
 #include <fstream>
 #include <iostream>
 
-std::ofstream ofmain;
-std::ostream& osmain = ofmain;
-//std::ostream& osmain = std::cout;
+std::ostream* osmain;
 
 typedef Dev::result_type Seed;
 
@@ -27,18 +25,18 @@ Seed getSeed() {
     Seed s = urandom();
 #pragma omp critical
     {
-        osmain << s << ' ';
+        *osmain << s << ' ';
     }
 #pragma omp barrier
 #pragma omp single
     {
-        osmain << std::endl;
+        *osmain << std::endl;
     }
     return s;
 }
 
 TrajProblem::Solution solveTraj(const TrajProblem& prob) {
-    osmain << "Seed" << std::endl;
+    *osmain << "Seed" << std::endl;
     Rng gen(getSeed());
     return prob.solve(gen);
 }
@@ -53,11 +51,11 @@ void checkAlignedDomain(const Domain* dom) {
         for (int i = 0; i < 6; ++i) {
             dir = (i < 3 ? -1 : 1) * Eigen::Vector3d::Unit(i % 3);
             Eigen::IOFormat fmt(0, 0, " ", "", "", "", "[", "]");
-            osmain << std::endl;
-            osmain << "pos " << pos.format(fmt) << std::endl;
-            osmain << "dir " << dir.format(fmt) << std::endl;
+            *osmain << std::endl;
+            *osmain << "pos " << pos.format(fmt) << std::endl;
+            *osmain << "dir " << dir.format(fmt) << std::endl;
             prob = TrajProblem(&mat, dom, pos, dir, 2l, 2l);
-            osmain << solveTraj(prob) << std::endl;
+            *osmain << solveTraj(prob) << std::endl;
         }
     }
 }
@@ -71,7 +69,7 @@ typename Derived::Solution solveField(const FieldProblem<Derived>& prob,
     Progress prog = prob.initProgress();
     prog.clock(clk);
     prog.ostream(osmain);
-    osmain << "Seeds" << std::endl;
+    *osmain << "Seeds" << std::endl;
 #pragma omp parallel
     {
         Rng gen(getSeed());
@@ -91,9 +89,9 @@ solveFieldN(const FieldProblem<Derived>& prob, const Clock& clk)
     typedef typename Derived::Solution Solution;
     std::vector<Solution> vec;
     for (int i = 0; i < N; ++i) {
-        osmain << "Solution " << i << std::endl;
+        *osmain << "Solution " << i << std::endl;
         Solution sol = solveField(prob, clk);
-        osmain << sol << std::endl;
+        *osmain << sol << std::endl;
         vec.push_back(sol);
     }
     
@@ -102,22 +100,38 @@ solveFieldN(const FieldProblem<Derived>& prob, const Clock& clk)
     return stats;
 }
 
-//int main(int argc, const char * argv[]) {
-int main() {
-    ofmain.open("./output/debug.log", std::ios::out | std::ios::trunc);
-    if (!ofmain.is_open()) return 1;
+int main(int argc, const char * argv[]) {
+    std::stringstream ss;
+    for (int i = 1; i < argc; ++i) {
+        ss << argv[i] << ' ';
+    }
+    
+    std::ofstream ofmain;
+    
+    std::string filename;
+    ss >> filename;
+    if (filename == "cout") {
+        osmain = &std::cout;
+    } else {
+        filename = "output/" + filename;
+        ofmain.open(filename.c_str(), std::ios::out | std::ios::trunc);
+//        ofmain.open(filename.c_str(), std::ios::out | std::ios::app);
+        if (!ofmain.is_open()) return 1;
+        std::cout << "Output file: " << filename << std::endl;
+        osmain = &ofmain;
+    }
     
     Clock clk;
-    osmain << clk.timestamp() << std::endl;
+    *osmain << clk.timestamp() << std::endl;
     
 #ifdef DEBUG
-    osmain << "DEBUG" << std::endl;
+    *osmain << "DEBUG" << std::endl;
 #endif
     
 //    Material mat("input/grey_disp.txt", "input/grey_relax2.txt", 300.);
     Material mat("input/Si_disp.txt", "input/Si_relax2.txt", 300.);
     
-    osmain << mat << std::endl;
+    *osmain << mat << std::endl;
     
 //    Eigen::Vector3d dim(2e-6, 2e-6, 2e-6);
 //    Eigen::Matrix<long, 3, 1> div(0, 0, 0);
@@ -143,41 +157,52 @@ int main() {
     
     Eigen::Matrix<double, 5, 1> dim;
     Eigen::Matrix<long, 5, 1> div;
-    dim << 2e-6, 2e-6, 8e-7, 2e-7, 4e-8;
-    div << 4, 4, 0, 0, 0;
-    OctetDomain dom(dim, div, 5.68);
+    double deltaT;
+//    dim << 2e-6, 2e-6, 8e-7, 2e-7, 4e-8;
+//    div << 4, 4, 0, 0, 0;
+//    deltaT = 5.68;
+    ss >> dim(0) >> dim(1) >> dim(2) >> dim(3) >> dim(4);
+    ss >> div(0) >> div(1) >> div(2) >> div(3) >> div(4);
+    ss >> deltaT;
+    OctetDomain dom(dim, div, deltaT);
     
     Eigen::Vector3d flux = Eigen::Vector3d::UnitZ();
     
 //    checkAlignedDomain(&dom);
     
-    osmain << dom << std::endl;
+    *osmain << dom << std::endl;
     
-    long maxscat = 100;
-    long maxloop = 100 * maxscat;
+//    long maxscat = 100;
+//    long maxloop = 100 * maxscat;
     
+//    long maxscat, maxloop;
+//    ss >> maxscat >> maxloop;
 //    TrajProblem prob(&mat, &dom, maxscat, maxloop);
-//    osmain << prob << std::endl;
-//    osmain << solveTraj(prob) << std::endl;
+//    *osmain << prob << std::endl;
+//    *osmain << solveTraj(prob) << std::endl;
 
-    long nemit = 1000000;
-
+//    long nemit = 1000000;
+    
+    long nemit, maxscat, maxloop;
+    ss >> nemit >> maxscat >> maxloop;
 //    TempProblem prob(&mat, &dom, nemit, maxscat, maxloop);
     FluxProblem prob(&mat, &dom, flux, nemit, maxscat, maxloop);
 //    MultiProblem prob(&mat, &dom, Eigen::Matrix3d::Identity(),
 //                      nemit, maxscat, maxloop);
     
 //    long step = maxscat / 10l;
-
+    
+//    long nemit, step, maxscat, maxloop;
+//    ss >> nemit >> step >> maxscat >> maxloop;
 //    CumTempProblem prob(&mat, &dom, nemit, step, maxscat, maxloop);
 //    CumFluxProblem prob(&mat, &dom, flux, nemit, step, maxscat, maxloop);
     
-    osmain << prob << std::endl;
-    osmain << solveField(prob, clk) << std::endl;
-    osmain << solveFieldN< 3 >(prob, clk) << std::endl;
+    *osmain << prob << std::endl;
+//    *osmain << solveField(prob, clk) << std::endl;
+//    *osmain << solveFieldN< 10 >(prob, clk) << std::endl;
     
-    osmain << "Total time" << std::endl;
-    osmain << clk.stopwatch() << std::endl;
+    *osmain << "Total time" << std::endl;
+    *osmain << clk.stopwatch() << std::endl;
     
     return 0;
 }

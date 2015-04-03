@@ -23,7 +23,9 @@
 template<typename Scalar>
 bool isApprox(const Scalar& a, const Scalar& b) {
     typedef std::numeric_limits<Scalar> Lim;
-    Scalar rhs = std::max(Lim::min(), Lim::epsilon() * std::max(a, b));
+    Scalar tol = 100*Lim::epsilon();
+    Scalar max = std::max(std::abs(a), std::abs(b));
+    Scalar rhs = std::max(Lim::min(), tol * max);
     return std::abs(a - b) <= rhs;
 }
 

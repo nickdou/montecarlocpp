@@ -52,9 +52,9 @@ private:
     Vector3d getCoord(const Vector3d& pos) const {
         Vector3d norm = inv_ * (pos - o_);
         if (Check) {
-            static const double margin = 100*Dbl::epsilon();
-            bool isInside = (norm.array() >= -margin).all() &&
-                            (norm.array() <= 1. + margin).all();
+            static const double tol = 100*Dbl::epsilon();
+            bool isInside = (norm.array() >= -tol).all() &&
+                            (norm.array() <= 1. + tol).all();
             if(!isInside) {
 #pragma omp critical
                 {

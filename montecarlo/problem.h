@@ -83,7 +83,7 @@ public:
         initVec();
     }
     void clock(const Clock& clk) { clk_ = clk; }
-    void ostream(std::ostream& os) { os_ = &os; }
+    void ostream(std::ostream* os) { os_ = os; }
     long increment() {
         if (tot_ == 0 || next_ >= div_) return count_;
         count_++;
