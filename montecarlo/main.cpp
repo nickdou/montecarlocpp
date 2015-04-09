@@ -126,8 +126,8 @@ solveFieldN(const FieldProblem<Derived>& prob, const Clock& clk, const F& fun)
 template<typename Derived>
 struct AverageEndsF {
     typedef typename Derived::Type Type;
-    const int nsdom = 7;
-    const int itop = 26;
+    static const int nsdom = 7;
+    static const int itop = 26;
     const OctetDomain* oct;
     Eigen::VectorXd weight;
     Type zero;
@@ -141,11 +141,11 @@ struct AverageEndsF {
     }
     Type operator()(const Field<Type>& fld) const {
         Type fldSum = zero;
-        for (int s = 0; s < 2; ++s) {
-            int begin = (s == 0 ? 0 : itop);
-            for (int i = 0; i < nsdom; ++i) {
+        for (int b = 0; b < 2; ++b) {
+            int begin = (b == 0 ? 0 : itop);
+            for (int s = 0; s < nsdom; ++s) {
                 typedef typename Field<Type>::const_iterator Iter;
-                Iter it = fld.find(oct->sdomPtrs()[begin+i]);
+                Iter it = fld.find(oct->sdomPtrs()[begin+s]);
                 BOOST_ASSERT_MSG(it != fld.end(), "Subdomain not found");
                 const Data<Type>& data = it->second;
                 Collection shape = data.shapeColl();
@@ -159,7 +159,7 @@ struct AverageEndsF {
                         }
                     }
                 }
-                fldSum += weight(i) * sdomSum / (shape[0] * shape[1]);
+                fldSum += weight(s) * sdomSum / (shape[0] * shape[1]);
             }
         }
         return fldSum / (2*weight.sum());
