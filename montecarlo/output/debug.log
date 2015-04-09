@@ -1,19 +1,18 @@
-2015-04-03 02:36:14
+2015-04-03 03:59:46
 DEBUG
 Material 0x7fff5fbf6860
   disp:  input/Si_disp.txt
   relax: input/Si_relax2.txt
   temp:  300
-OctetDomain 0x7fff5fbf7010
+OctetDomain 0x7fff5fbf7000
   dim: 2e-06 2e-06 8e-07 2e-07 5e-08
   div: 4 4 0 0 0
   dT:  5.68
-FluxProblem 0x7fff5fbf6758
+CumTempProblem 0x7fff5fbf6740
   mat:     0x7fff5fbf6860
-  dom:     0x7fff5fbf7010
+  dom:     0x7fff5fbf7000
   nemit:   1000000
   maxscat: 1000
-  maxloop: 100000
+  maxloop: 1000000
+  step:    10
   dir:     0 0 1
-Total time
-00:00:00

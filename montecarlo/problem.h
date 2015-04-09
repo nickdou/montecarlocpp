@@ -51,7 +51,7 @@ public:
         std::ostringstream ss;
         ss << std::setfill('0');
         ss << std::setw(2) << diff / 3600 << ':';
-        ss << std::setw(2) << diff / 60 << ':';
+        ss << std::setw(2) << diff / 60 % 60 << ':';
         ss << std::setw(2) << diff % 60;
         return ss.str();
     }
@@ -238,6 +238,7 @@ public:
         std::for_each(sdomPtrs.begin(), sdomPtrs.end(), add);
         return field;
     }
+    virtual Type initValue() const = 0;
 private:
     struct AddRegionF {
         Field<Type>* field;
@@ -249,7 +250,6 @@ private:
             field->insert( Value(sdom, sdom->initData<Type>(value)) );
         }
     };
-    virtual Type initValue() const = 0;
 protected:
     Field<Type> solveField(const AccumF& fun, const Factor& fac,
                            Rng& gen, Progress* prog) const;

@@ -29,7 +29,7 @@
 namespace fusion = boost::fusion;
 namespace result_of = boost::fusion::result_of;
 
-class Domain;
+//class Domain;
 
 class Subdomain {
 protected:

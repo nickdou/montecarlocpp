@@ -12,6 +12,7 @@
 #include "material.h"
 #include "random.h"
 #include <Eigen/Core>
+#include <boost/assert.hpp>
 #include <vector>
 #include <fstream>
 #include <iostream>
@@ -100,14 +101,81 @@ solveFieldN(const FieldProblem<Derived>& prob, const Clock& clk)
     return stats;
 }
 
+template<int N, typename Derived, typename F>
+Statistics<typename F::Type>
+solveFieldN(const FieldProblem<Derived>& prob, const Clock& clk, const F& fun)
+{
+    typedef typename Derived::Solution Solution;
+    typedef typename F::Type Type;
+    std::vector<Type> vec;
+    for (int i = 0; i < N; ++i) {
+        *osmain << "Solution " << i << std::endl;
+        Solution sol = solveField(prob, clk);
+        *osmain << sol << std::endl;
+        *osmain << "Output " << i << std::endl;
+        Type out = fun(sol);
+        *osmain << out << std::endl <<std::endl;
+        vec.push_back(out);
+    }
+    
+    Statistics<Type> stats(prob.initValue());
+    std::for_each(vec.begin(), vec.end(), stats.accumulator());
+    return stats;
+}
+
+template<typename Derived>
+struct AverageEndsF {
+    typedef typename Derived::Type Type;
+    const int nsdom = 7;
+    const int itop = 26;
+    const OctetDomain* oct;
+    Eigen::VectorXd weight;
+    Type zero;
+    AverageEndsF(const OctetDomain& dom,
+                 const Eigen::Matrix<double, 5, 1>& dim,
+                 const Type& z)
+    : oct(&dom), weight(nsdom), zero(z)
+    {
+        weight << dim[3], dim[4], dim[2],
+                  dim[4], dim[2] - dim[4], dim[4], dim[3];
+    }
+    Type operator()(const Field<Type>& fld) const {
+        Type fldSum = zero;
+        for (int s = 0; s < 2; ++s) {
+            int begin = (s == 0 ? 0 : itop);
+            for (int i = 0; i < nsdom; ++i) {
+                typedef typename Field<Type>::const_iterator Iter;
+                Iter it = fld.find(oct->sdomPtrs()[begin+i]);
+                BOOST_ASSERT_MSG(it != fld.end(), "Subdomain not found");
+                const Data<Type>& data = it->second;
+                Collection shape = data.shapeColl();
+                Type sdomSum = zero;
+                for (typename Data<Type>::Size i = 0; i < shape[0]; ++i) {
+                    for (typename Data<Type>::Size j = 0; j < shape[1]; ++j) {
+                        if (s == 0) {
+                            sdomSum += data[i][j][0];
+                        } else {
+                            sdomSum += data[i][j][shape[2]-1];
+                        }
+                    }
+                }
+                fldSum += weight(i) * sdomSum / (shape[0] * shape[1]);
+            }
+        }
+        return fldSum / (2*weight.sum());
+    }
+};
+
 int main(int argc, const char * argv[]) {
     std::stringstream ss;
     for (int i = 1; i < argc; ++i) {
         ss << argv[i] << ' ';
     }
     
-    std::ofstream ofmain;
+    Clock clk;
+    std::string time = clk.timestamp();
     
+    std::ofstream ofmain;
     std::string filename;
     ss >> filename;
     if (filename == "cout") {
@@ -117,13 +185,12 @@ int main(int argc, const char * argv[]) {
         ofmain.open(filename.c_str(), std::ios::out | std::ios::trunc);
 //        ofmain.open(filename.c_str(), std::ios::out | std::ios::app);
         if (!ofmain.is_open()) return 1;
+        std::cout << time << std::endl;
         std::cout << "Output file: " << filename << std::endl;
         osmain = &ofmain;
     }
     
-    Clock clk;
-    *osmain << clk.timestamp() << std::endl;
-    
+    *osmain << time << std::endl;
 #ifdef DEBUG
     *osmain << "DEBUG" << std::endl;
 #endif
@@ -183,23 +250,28 @@ int main(int argc, const char * argv[]) {
 
 //    long nemit = 1000000;
     
-    long nemit, maxscat, maxloop;
-    ss >> nemit >> maxscat >> maxloop;
+//    long nemit, maxscat, maxloop;
+//    ss >> nemit >> maxscat >> maxloop;
+    
 //    TempProblem prob(&mat, &dom, nemit, maxscat, maxloop);
-    FluxProblem prob(&mat, &dom, flux, nemit, maxscat, maxloop);
+//    FluxProblem prob(&mat, &dom, flux, nemit, maxscat, maxloop);
 //    MultiProblem prob(&mat, &dom, Eigen::Matrix3d::Identity(),
 //                      nemit, maxscat, maxloop);
     
 //    long step = maxscat / 10l;
     
-//    long nemit, step, maxscat, maxloop;
-//    ss >> nemit >> step >> maxscat >> maxloop;
+    long nemit, step, maxscat, maxloop;
+    ss >> nemit >> step >> maxscat >> maxloop;
+
 //    CumTempProblem prob(&mat, &dom, nemit, step, maxscat, maxloop);
-//    CumFluxProblem prob(&mat, &dom, flux, nemit, step, maxscat, maxloop);
+    CumFluxProblem prob(&mat, &dom, flux, nemit, step, maxscat, maxloop);
     
     *osmain << prob << std::endl;
 //    *osmain << solveField(prob, clk) << std::endl;
 //    *osmain << solveFieldN< 10 >(prob, clk) << std::endl;
+    
+    AverageEndsF<CumFluxProblem> fun(dom, dim, prob.initValue());
+    *osmain << solveFieldN< 10 >(prob, clk, fun) << std::endl;
     
     *osmain << "Total time" << std::endl;
     *osmain << clk.stopwatch() << std::endl;

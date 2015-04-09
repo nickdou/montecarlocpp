@@ -13,12 +13,9 @@
 #include <boost/multi_array.hpp>
 #include <boost/array.hpp>
 #include <boost/function.hpp>
-#include <boost/lambda/bind.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <boost/core/enable_if.hpp>
 #include <boost/type_traits/is_scalar.hpp>
-#include <boost/type_traits/is_same.hpp>
-#include <boost/mpl/if.hpp>
 #include <boost/assert.hpp>
 #include <functional>
 #include <algorithm>
@@ -40,6 +37,11 @@ public:
         operator[](0) = i;
         operator[](1) = j;
         operator[](2) = k;
+    }
+    explicit Collection(const Size* shape) : Base() {
+        operator[](0) = shape[0];
+        operator[](1) = shape[1];
+        operator[](2) = shape[2];
     }
     template<typename Derived>
     explicit Collection(const Eigen::DenseBase<Derived>& index) : Base() {
@@ -88,58 +90,56 @@ public:
     typedef boost::fortran_storage_order Order;
     typedef typename Base::size_type Size;
     typedef Eigen::Matrix<Size, 3, 1> Vector3s;
-private:
-    Vector3s shape_;
-    static Collection shapeColl(const Base& array) {
-        const Size* shape = array.shape();
-        return Collection(shape[0], shape[1], shape[2]);
-    }
 public:
-    Data() : Base(Collection(0,0,0), Order()), shape_(0,0,0) {}
-    Data(const Data& data)
-    : Base(static_cast<const Base&>(data)), shape_(data.shape_)
-    {}
-    Data(const Base& arr)
-    : Base(shapeColl(arr), Order()), shape_(shapeColl(arr).vector())
-    {
+    Data() : Base(Collection(0,0,0), Order()) {}
+    Data(const Data& data) : Base(static_cast<const Base&>(data)) {}
+    Data(const Base& arr) : Base(arr.shapeColl(), Order()) {
         Base::operator=(arr);
     }
     template<typename Coll>
-    explicit Data(const Coll& coll)
-    : Base(coll, Order()), shape_(coll[0], coll[1], coll[2])
+    explicit Data(const Coll& coll) : Base(coll, Order())
     {}
     template<typename Coll>
-    explicit Data(const Coll& coll, const T& value)
-    : Base(coll, Order()), shape_(coll[0], coll[1], coll[2])
+    explicit Data(const Coll& coll, const T& value) : Base(coll, Order())
     {
         fill(value);
     }
     void fill(const T& value) {
         std::fill(Base::data(), Base::data() + Base::num_elements(), value);
     }
+    Collection shapeColl() const {
+        return Collection(Base::shape());
+    }
+    Vector3s shapeVec() const {
+        return Eigen::Map<Vector3s>( const_cast<Size*>(Base::shape()) );
+    }
     Data& operator+=(const Data& data) {
-        BOOST_ASSERT_MSG(shape_ == data.shape_, "Data shapes not consistent");
+        BOOST_ASSERT_MSG(shapeVec() == data.shapeVec(),
+                         "Data shapes not consistent");
         const T* it = data.data();
         std::for_each(Base::data(), Base::data() + Base::num_elements(),
                       lambda::_1 += *(lambda::var(it)++));
         return *this;
     }
     Data& operator-=(const Data& data) {
-        BOOST_ASSERT_MSG(shape_ == data.shape_, "Data shapes not consistent");
+        BOOST_ASSERT_MSG(shapeVec() == data.shapeVec(),
+                         "Data shapes not consistent");
         const T* it = data.data();
         std::for_each(Base::data(), Base::data() + Base::num_elements(),
                       lambda::_1 -= *(lambda::var(it)++));
         return *this;
     }
     Data& operator*=(const Data& data) {
-        BOOST_ASSERT_MSG(shape_ == data.shape_, "Data shapes not consistent");
+        BOOST_ASSERT_MSG(shapeVec() == data.shapeVec(),
+                         "Data shapes not consistent");
         const T* it = data.data();
         std::for_each(Base::data(), Base::data() + Base::num_elements(),
                       lambda::_1 *= *(lambda::var(it)++));
         return *this;
     }
     Data& operator/=(const Data& data) {
-        BOOST_ASSERT_MSG(shape_ == data.shape_, "Data shapes not consistent");
+        BOOST_ASSERT_MSG(shapeVec() == data.shapeVec(),
+                         "Data shapes not consistent");
         const T* it = data.data();
         std::for_each(Base::data(), Base::data() + Base::num_elements(),
                       lambda::_1 /= *(lambda::var(it)++));
@@ -243,17 +243,18 @@ public:
         os << std::scientific;
         if (precision) os << std::setprecision(precision);
         
+        Vector3s vec = shapeVec();
         typename Vector3s::Index idx = 0;
-        switch ((shape_.array() > 1).count()) {
+        switch ((vec.array() > 1).count()) {
             case 0:
                 printArray<true>(os, 0, 0, 1, width);
                 break;
             case 1:
-                (shape_.array() > 1).maxCoeff(&idx);
+                (vec.array() > 1).maxCoeff(&idx);
                 printArray<true>(os, 0, (idx+2)%3, idx, width);
                 break;
             case 2:
-                (shape_.array() == 1).maxCoeff(&idx);
+                (vec.array() == 1).maxCoeff(&idx);
                 if (idx == 1) {
                     printArray<true>(os, 0, 2, 0, width);
                     
@@ -262,7 +263,7 @@ public:
                 }
                 break;
             case 3:
-                for (Size k = 0; k < shape_(2); ++k) {
+                for (Size k = 0; k < vec(2); ++k) {
                     if (k > 0) os << std::endl;
                     printArray<false>(os, k * Base::strides()[2], 0, 1, width);
                 }
@@ -276,7 +277,8 @@ private:
                     int width) const
     {
         PrintF<T> printElem(width);
-        Size n = 0, rows = shape_(r), cols = shape_(c);
+        Vector3s vec = shapeVec();
+        Size n = 0, rows = vec(r), cols = vec(c);
         for (Size i = 0; i < rows; ++i) {
             if (!Row) n = i;
             for (Size j = 0; j < cols; ++j) {
@@ -482,7 +484,7 @@ public:
     Statistics() : n_(0) {}
     Statistics(const T& zero) : n_(0), z_(zero), m_(zero), s_(zero) {}
     T mean() const { return m_; }
-    T variance() const { return (n_ < 2 ? z_ : s_/(n_ - 1)); }
+    T variance() const { return ( n_ < 2 ? z_ : T(s_/(n_ - 1)) ); }
     void add(const T& x) {
         n_++;
         T d = x - m_;
@@ -493,7 +495,7 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const Statistics& stats) {
         std::ios_base::fmtflags flags = std::cout.flags();
         os << "Mean" << std::endl;
-        os << stats.mean() << std::endl;
+        os << stats.mean() << std::endl << std::endl;
         os << "Variance" << std::endl;
         os << stats.variance();
         return os << std::setiosflags(flags);

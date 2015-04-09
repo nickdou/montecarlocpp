@@ -6,91 +6,68 @@
 //
 //
 
-#include "a.h"
-#include <boost/type_traits.hpp>
-#include <boost/fusion/view.hpp>
-#include <boost/fusion/algorithm.hpp>
-#include <boost/fusion/sequence.hpp>
-#include <boost/fusion/container/vector.hpp>
-#include <boost/optional.hpp>
-#include <boost/random/random_device.hpp>
-#include <boost/random.hpp>
-#include <limits>
+#include "../montecarlo/data.h"
+#include <boost/multi_array.hpp>
+#include <boost/lambda/bind.hpp>
+#include <boost/lambda/lambda.hpp>
+#include <algorithm>
 #include <iostream>
 
-using boost::mpl::_;
-
-namespace fusion = boost::fusion;
-
-struct print {
-    typedef const std::ostream& type;
-    template<typename T>
-    type operator()(type os, const T& x) const {
-        const_cast<std::ostream&>(os) << x << ' ';
-        return os;
-    }
-};
-
-struct add {
-    typedef int result_type;
-    template<typename T>
-    int operator()(int i, const T& x) const {
-        return i + x.val();
-    }
-};
-
-/*
-struct append {
-    typedef const std::vector<const A*>& type;
-    template<typename T>
-    type operator()(type vec, const T& x) const {
-        const_cast<std::vector<const A*>&>(vec).push_back(&x);
-        return vec;
-    }
-};
-*/
-struct append {
-    typedef std::vector<const A*> type;
-    template<typename T>
-    type* operator()(type* vec, const T& x) const {
-        vec->push_back(&x);
-        return vec;
-    }
-};
-
-void testVec() {
-    typedef boost::fusion::vector4<A, A, C, C> Vector;
-    Vector u(1, 2, 3, 4);
-    std::cout << u << std::endl;
-    fusion::fold(fusion::filter_view<Vector,
-                 boost::is_base_of<C,_>>(u), std::cout, print());
-    std::cout << std::endl;
-    typedef fusion::filter_view<Vector, boost::is_base_of<C,_>> Seq;
-    typedef std::vector<const A*> State;
-    State vec;
-    fusion::fold(Seq(u), &vec, append());
-    for(State::iterator it = vec.begin(); it != vec.end(); ++it) {
-        std::cout << *it << std::endl;
-    }
-}
-
-void testInPlace() {
-    boost::optional<A> a;
-    a = boost::in_place(1);
-    cout << *a << endl;
-}
-
-void testDevice() {
-    boost::random_device dev;
-    cout << '[' << dev.min() << ' ' << dev.max() << ']' << endl;
-    cout << '[' << std::numeric_limits<unsigned int>::min() <<
-    ' ' << std::numeric_limits<unsigned int>::max() << ']' << endl;
-    cout << dev() << endl;
-}
-
+namespace lambda = boost::lambda;
 
 int main(int argc, const char * argv[]) {
-    testDevice();
+    using std::cout;
+    using std::endl;
+    
+//    typedef double Type;
+//    Type z = 0.;
+//    Type o = 1.;
+    
+    typedef Eigen::Vector3d Type;
+    Type z = Eigen::Vector3d::Zero();
+    Type o = Eigen::Vector3d::Ones();
+    
+    Data<Type> arr2( Collection(2, 2, 2) );
+    Data<Type> arr3( Collection(3, 3, 3) );
+    
+    Type t;
+    t = z;
+    std::generate(arr2.data(), arr2.data() + arr2.num_elements(),
+                  lambda::var(t) += o);
+    t = z;
+    std::generate(arr3.data(), arr3.data() + arr3.num_elements(),
+                  lambda::var(t) += o);
+    
+    const Data<Type>* arr = &arr3;
+    
+    cout << *arr << endl;
+    
+//    Data<Type>::index_gen indices;
+//    Data<Type>::index_range all;
+//    boost::multi_array<Type, 2> slice(boost::extents[0][0],
+//                                      boost::fortran_storage_order());
+//    slice.resize( boost::extents[arr.shape()[0]][arr.shape()[1]] );
+//    slice = arr[indices[all][all][0]];
+//    
+//    Eigen::IOFormat fmt(0, 0, " ", "", "", "", "[", "]");
+//    std::for_each(slice.data(), slice.data() + slice.num_elements(),
+//                  cout << lambda::bind(&Eigen::Vector3d::format,
+//                                       lambda::_1, fmt) << '\n');
+//    cout << endl;
+//    
+//    Type sum = std::accumulate(slice.data(),
+//                               slice.data() + slice.num_elements(),
+//                               z);
+    
+    Type sum = z;
+    const Collection shape = arr->shapeColl();
+    for (Data<Type>::Size i = 0; i < shape[0]; ++i) {
+        for (Data<Type>::Size j = 0; j < shape[1]; ++j) {
+            sum += (*arr)[i][j][0];
+        }
+    }
+    
+    cout << sum << endl;
     return 0;
 }
 
