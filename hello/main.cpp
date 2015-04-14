@@ -6,11 +6,6 @@
 //
 //
 
-#include "../montecarlo/domain.h"
-#include "../montecarlo/boundary.h"
-#include "../montecarlo/data.h"
-#include <Eigen/Core>
-#include <utility>
 #include <vector>
 #include <iostream>
 
@@ -18,14 +13,15 @@ int main(int argc, const char * argv[]) {
     using std::cout;
     using std::endl;
     
-    const int N = 14;
-    const int arr[N] = { 0,  1,  2,  3,  4,  5,  6,
-                        26, 27, 28, 29, 30, 31, 32};
+    std::vector<long> vec = {0, 1, 2, 3, 4};
+    const long nbin = 2;
     
-    for(const int* it = arr; it != arr + N; ++it) {
-        cout << *it << ' ';
+    for (std::vector<long>::const_iterator it = vec.begin(); it != vec.end();
+         ++it)
+    {
+        long n = *it;
+        cout << (n%nbin == 0 ? n/nbin : n/nbin + 1) << endl;
     }
-    cout << endl;
     
     return 0;
 }

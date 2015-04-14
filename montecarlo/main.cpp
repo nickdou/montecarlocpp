@@ -118,7 +118,7 @@ solveFieldN(const FieldProblem<Derived>& prob, const Clock& clk, const F& fun)
         vec.push_back(out);
     }
     
-    Statistics<Type> stats(prob.initValue());
+    Statistics<Type> stats(prob.initElem());
     std::for_each(vec.begin(), vec.end(), stats.accumulator());
     return stats;
 }
@@ -258,21 +258,22 @@ int main(int argc, const char * argv[]) {
 //    MultiProblem prob(&mat, &dom, Eigen::Matrix3d::Identity(),
 //                      nemit, maxscat, maxloop);
     
-//    long step = maxscat / 10l;
+//    long size = 10;
     
-    long nemit, step, maxscat, maxloop;
-    ss >> nemit >> step >> maxscat >> maxloop;
+    long nemit, size, maxscat, maxloop;
+    ss >> nemit >> size >> maxscat >> maxloop;
 
-//    CumTempProblem prob(&mat, &dom, nemit, step, maxscat, maxloop);
-    CumFluxProblem prob(&mat, &dom, flux, nemit, step, maxscat, maxloop);
+//    CumTempProblem prob(&mat, &dom, nemit, size, maxscat, maxloop);
+    CumFluxProblem prob(&mat, &dom, flux, nemit, size, maxscat, maxloop);
     
     *osmain << prob << std::endl;
 //    *osmain << solveField(prob, clk) << std::endl;
 //    *osmain << solveFieldN< 10 >(prob, clk) << std::endl;
     
-    AverageEndsF<CumFluxProblem> fun(dom, dim, prob.initValue());
+    AverageEndsF<CumFluxProblem> fun(dom, dim, prob.initElem());
     *osmain << solveFieldN< 10 >(prob, clk, fun) << std::endl;
     
+    *osmain << std::endl;
     *osmain << "Total time" << std::endl;
     *osmain << clk.stopwatch() << std::endl;
     

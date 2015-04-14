@@ -40,7 +40,7 @@ TeeDomain::TeeDomain(const Eigen::Matrix<double, 5, 1>& dim,
     ss << "  dim: " << dim.transpose() << std::endl;
     ss << "  div: " << div.transpose() << std::endl;
     ss << "  dT:  " << deltaT;
-    info_ = ss.str();
+    info( ss.str() );
     
     centers_ <<        0.5*dim(0),        0.5*dim(2), 0.5*dim(4),
                 dim(0)+0.5*dim(1),        0.5*dim(2), 0.5*dim(4),
@@ -76,7 +76,7 @@ TubeDomain::TubeDomain(const Eigen::Matrix<double, 4, 1>& dim,
     ss << "  dim: " << dim.transpose() << std::endl;
     ss << "  div: " << div.transpose() << std::endl;
     ss << "  dT:  " << deltaT;
-    info_ = ss.str();
+    info( ss.str() );
     
     centers_ << 0.5*dim(0), dim(1)+0.5*dim(3),        0.5*dim(2),
                 0.5*dim(0), dim(1)+0.5*dim(3), dim(2)+0.5*dim(3),
@@ -240,7 +240,7 @@ centers_(33, 3)
     ss << "  dim: " << dim.transpose() << std::endl;
     ss << "  div: " << div.transpose() << std::endl;
     ss << "  dT:  " << deltaT;
-    info_ = ss.str();
+    info( ss.str() );
     
     centers_<< -0.5*dim(4),               0.5*dim(3), -0.5*dim(0)-dim(2)-dim(4),
                -0.5*dim(4),        dim(3)+0.5*dim(4), -0.5*dim(0)-dim(2)-dim(4),

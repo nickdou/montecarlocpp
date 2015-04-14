@@ -279,6 +279,7 @@ struct CumF {
         BOOST_ASSERT_MSG(before.phn.nscat() == after.phn.nscat(),
                          "Scattering occured during advection step");
         long index = before.phn.nscat() / step;
+        BOOST_ASSERT_MSG(index < size, "Index out of bounds");
         return functor(before, after) * VectorXT::Unit(size, index);
     }
 };

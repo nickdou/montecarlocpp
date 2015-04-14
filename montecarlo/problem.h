@@ -107,8 +107,7 @@ public:
 protected:
     const Material* mat_;
     const Domain* dom_;
-    std::string info_;
-    std::string info() const {
+    virtual std::string info() const {
         std::ostringstream ss;
         ss << "  mat:     " << mat_ << std::endl;
         ss << "  dom:     " << dom_;
@@ -123,7 +122,7 @@ public:
     virtual Progress initProgress() const = 0;
     virtual Solution solve(Rng& gen, Progress* prog = 0) const = 0;
     friend std::ostream& operator<<(std::ostream& os, const Problem& prob) {
-        return os << prob.info_;
+        return os << prob.info();
     }
 };
 
@@ -162,40 +161,30 @@ public:
                 long maxscat = 100, long maxloop = 0)
     : Base(mat, dom), maxscat_(maxscat), maxloop_(maxloop),
     prop_(prop), pos_(pos), dir_(dir)
-    {
-        Base::info_ = info();
-    }
+    {}
     TrajProblem(const Material* mat, const Domain* dom,
                 const Phonon::Prop& prop, const Eigen::Vector3d& pos,
                 long maxscat = 100, long maxloop = 0)
     : Base(mat, dom), maxscat_(maxscat), maxloop_(maxloop),
     prop_(prop), pos_(pos), dir_()
-    {
-        Base::info_ = info();
-    }
+    {}
     TrajProblem(const Material* mat, const Domain* dom,
                 const Eigen::Vector3d& pos, const Eigen::Vector3d& dir,
                 long maxscat = 100, long maxloop = 0)
     : Base(mat, dom), maxscat_(maxscat), maxloop_(maxloop),
     prop_(), pos_(pos), dir_(dir)
-    {
-        Base::info_ = info();
-    }
+    {}
     TrajProblem(const Material* mat, const Domain* dom,
                 const Eigen::Vector3d& pos,
                 long maxscat = 100, long maxloop = 0)
     : Base(mat, dom), maxscat_(maxscat), maxloop_(maxloop),
     prop_(), pos_(pos), dir_()
-    {
-        Base::info_ = info();
-    }
+    {}
     TrajProblem(const Material* mat, const Domain* dom,
                 long maxscat = 100, long maxloop = 0)
     : Base(mat, dom), maxscat_(maxscat), maxloop_(maxloop),
     prop_(), pos_(), dir_()
-    {
-        Base::info_ = info();
-    }
+    {}
     Progress initProgress() const {
         return Progress(maxscat_, std::min(10l, maxscat_));
     }
@@ -213,7 +202,7 @@ public:
 protected:
     static const long loopFactor_ = 100;
     long nemit_, maxscat_, maxloop_;
-    std::string info() const {
+    virtual std::string info() const {
         std::ostringstream ss;
         ss << Base::info() << std::endl;
         ss << "  nemit:   " << nemit_ << std::endl;
@@ -233,12 +222,12 @@ public:
     }
     Field<Type> initField() const {
         Field<Type> field;
-        AddRegionF add(&field, initValue());
+        AddRegionF add(&field, initElem());
         const Domain::SdomPtrs& sdomPtrs = Base::dom_->sdomPtrs();
         std::for_each(sdomPtrs.begin(), sdomPtrs.end(), add);
         return field;
     }
-    virtual Type initValue() const = 0;
+    virtual Type initElem() const = 0;
 private:
     struct AddRegionF {
         Field<Type>* field;
@@ -268,17 +257,20 @@ struct ProblemTraits<TempProblem> {
 class TempProblem : public FieldProblem<TempProblem> {
 public:
     typedef FieldProblem<TempProblem> Base;
+private:
+    std::string info() const {
+        std::ostringstream ss;
+        ss << "TempProblem " << this << std::endl;
+        ss << Base::info();
+        return ss.str();
+    }
+public:
     TempProblem() : Base() {}
     TempProblem(const Material* mat, const Domain* dom,
                 long nemit, long maxscat, long maxloop = 0)
     : Base(mat, dom, nemit, maxscat, maxloop)
-    {
-        std::ostringstream ss;
-        ss << "TempProblem " << this << std::endl;
-        ss << Base::info();
-        Base::Base::info_ = ss.str();
-    }
-    Type initValue() const { return 0.; }
+    {}
+    Type initElem() const { return 0.; }
     Solution solve(Rng& gen, Progress* prog = 0) const;
 };
 
@@ -297,20 +289,21 @@ public:
     typedef FieldProblem<FluxProblem> Base;
 private:
     Eigen::Vector3d dir_;
+    std::string info() const {
+        std::ostringstream ss;
+        ss << "FluxProblem " << this << std::endl;
+        ss << Base::info() << std::endl;
+        ss << "  dir:     " << dir_.transpose();
+        return ss.str();
+    }
 public:
     FluxProblem() : Base() {}
     FluxProblem(const Material* mat, const Domain* dom,
                 const Eigen::Vector3d& dir,
                 long nemit, long maxscat, long maxloop = 0)
     : Base(mat, dom, nemit, maxscat, maxloop), dir_(dir)
-    {
-        std::ostringstream ss;
-        ss << "FluxProblem " << this << std::endl;
-        ss << Base::info() << std::endl;
-        ss << "  dir:     " << dir_.transpose();
-        Base::Base::info_ = ss.str();
-    }
-    Type initValue() const { return 0.; }
+    {}
+    Type initElem() const { return 0.; }
     Solution solve(Rng& gen, Progress* prog = 0) const;
 };
 
@@ -328,26 +321,27 @@ class MultiProblem : public FieldProblem<MultiProblem> {
 public:
     typedef FieldProblem<MultiProblem> Base;
 private:
-    Eigen::Matrix3d inv_;
+    Eigen::Matrix3d rot_, inv_;
+    std::string info() const {
+        std::ostringstream ss;
+        ss << "FluxProblem " << this << std::endl;
+        ss << Base::info() << std::endl;
+        ss << "  rot:     " << rot_.row(0) << ' ' <<
+                               rot_.row(1) << ' ' <<
+                               rot_.row(2);
+        return ss.str();
+    }
 public:
     MultiProblem() : Base() {}
     MultiProblem(const Material* mat, const Domain* dom,
                  const Eigen::Matrix3d& rot,
                  long nemit, long maxscat, long maxloop = 0)
-    : Base(mat, dom, nemit, maxscat, maxloop), inv_(rot.transpose())
+    : Base(mat, dom, nemit, maxscat, maxloop), rot_(rot), inv_(rot.transpose())
     {
         BOOST_ASSERT_MSG(Eigen::Matrix3d::Identity().isApprox(inv_*rot),
                          "Direction matrix must be unitary");
-        
-        std::ostringstream ss;
-        ss << "FluxProblem " << this << std::endl;
-        ss << Base::info() << std::endl;
-        ss << "  rot:     " << rot.row(0) << ' ' <<
-                               rot.row(1) << ' ' <<
-                               rot.row(2);
-        Base::Base::info_ = ss.str();
     }
-    Type initValue() const { return Eigen::Array4d::Zero(); }
+    Type initElem() const { return Eigen::Array4d::Zero(); }
     Solution solve(Rng& gen, Progress* prog = 0) const;
 };
 
@@ -365,21 +359,22 @@ class CumTempProblem : public FieldProblem<CumTempProblem> {
 public:
     typedef FieldProblem<CumTempProblem> Base;
 private:
-    long step_, size_;
-public:
-    CumTempProblem() : Base() {}
-    CumTempProblem(const Material* mat, const Domain* dom,
-                   long nemit, long step, long maxscat, long maxloop = 0)
-    : Base(mat, dom, nemit, maxscat, maxloop),
-    step_(step), size_((maxscat - 1l)/step + 1l)
-    {
+    long size_, step_;
+    std::string info() const {
         std::ostringstream ss;
         ss << "CumTempProblem " << this << std::endl;
         ss << Base::info() << std::endl;
         ss << "  step:    " << step_;
-        Base::Base::info_ = ss.str();
+        return ss.str();
     }
-    Type initValue() const { return Eigen::ArrayXd::Zero(size_); }
+public:
+    CumTempProblem() : Base() {}
+    CumTempProblem(const Material* mat, const Domain* dom,
+                   long nemit, long size, long maxscat, long maxloop = 0)
+    : Base(mat, dom, nemit, maxscat, maxloop),
+    size_(size), step_(maxscat%size == 0 ? maxscat/size : maxscat/size + 1)
+    {}
+    Type initElem() const { return Eigen::ArrayXd::Zero(size_); }
     Solution solve(Rng& gen, Progress* prog = 0) const;
 };
 
@@ -398,23 +393,24 @@ public:
     typedef FieldProblem<CumFluxProblem> Base;
 private:
     Eigen::Vector3d dir_;
-    long step_, size_;
-public:
-    CumFluxProblem() : Base() {}
-    CumFluxProblem(const Material* mat, const Domain* dom,
-                   const Eigen::Vector3d& dir,
-                   long nemit, long step, long maxscat, long maxloop = 0)
-    : Base(mat, dom, nemit, maxscat, maxloop), dir_(dir),
-    step_(step), size_((maxscat - 1l)/step + 1l)
-    {
+    long size_, step_;
+    std::string info() const {
         std::ostringstream ss;
         ss << "CumTempProblem " << this << std::endl;
         ss << Base::info() << std::endl;
         ss << "  step:    " << step_ << std::endl;
         ss << "  dir:     " << dir_.transpose();
-        Base::Base::info_ = ss.str();
+        return ss.str();
     }
-    Type initValue() const { return Eigen::ArrayXd::Zero(size_); }
+public:
+    CumFluxProblem() : Base() {}
+    CumFluxProblem(const Material* mat, const Domain* dom,
+                   const Eigen::Vector3d& dir,
+                   long nemit, long size, long maxscat, long maxloop = 0)
+    : Base(mat, dom, nemit, maxscat, maxloop), dir_(dir),
+    size_(size), step_(maxscat%size == 0 ? maxscat/size : maxscat/size + 1)
+    {}
+    Type initElem() const { return Eigen::ArrayXd::Zero(size_); }
     Solution solve(Rng& gen, Progress* prog = 0) const;
 };
 

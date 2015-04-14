@@ -225,6 +225,7 @@ public:
 private:
     SdomPtrs sdomPtrs_;
     EmitPtrs emitPtrs_;
+    std::string info_;
 protected:
     void addSdom(const Subdomain* sdom) {
         sdomPtrs_.push_back(sdom);
@@ -248,7 +249,9 @@ protected:
             dom_->addSdom(&sdom);
         }
     };
-    std::string info_;
+    void info(const std::string& str) {
+        info_ = str;
+    }
 private:
     Domain(const Domain&);
     Domain& operator=(const Domain&);
@@ -302,7 +305,7 @@ public:
         ss << "  dim: " << corner.transpose() << std::endl;
         ss << "  div: " << div.transpose() << std::endl;
         ss << "  dT:  " << deltaT;
-        info_ = ss.str();
+        info( ss.str() );
         
         makePair(sdom_.bdry<0>(), sdom_.bdry<3>(), Vector3d(corner(0), 0., 0.));
         addSdom(&sdom_);
@@ -330,7 +333,7 @@ public:
         ss << "  dim: " << corner.transpose() << std::endl;
         ss << "  div: " << div.transpose() << std::endl;
         ss << "  dT:  " << deltaT;
-        info_ = ss.str();
+        info( ss.str() );
         
         makePair(sdom_.bdry<0>(), sdom_.bdry<3>(), Vector3d(corner(0), 0., 0.));
         addSdom(&sdom_);
