@@ -364,7 +364,7 @@ private:
         std::ostringstream ss;
         ss << "CumTempProblem " << this << std::endl;
         ss << Base::info() << std::endl;
-        ss << "  step:    " << step_;
+        ss << "  size:    " << size_;
         return ss.str();
     }
 public:
@@ -398,7 +398,7 @@ private:
         std::ostringstream ss;
         ss << "CumTempProblem " << this << std::endl;
         ss << Base::info() << std::endl;
-        ss << "  step:    " << step_ << std::endl;
+        ss << "  size:    " << size_ << std::endl;
         ss << "  dir:     " << dir_.transpose();
         return ss.str();
     }

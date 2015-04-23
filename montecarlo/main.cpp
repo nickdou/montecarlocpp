@@ -16,6 +16,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <cmath>
 
 std::ostream* osmain;
 
@@ -222,15 +223,23 @@ int main(int argc, const char * argv[]) {
     
 //    Eigen::Vector3d flux = Eigen::Vector3d::UnitX();
     
+    double cell, beam;
     Eigen::Matrix<double, 5, 1> dim;
     Eigen::Matrix<long, 5, 1> div;
     double deltaT;
 //    dim << 2e-6, 2e-6, 8e-7, 2e-7, 4e-8;
 //    div << 4, 4, 0, 0, 0;
 //    deltaT = 5.68;
-    ss >> dim(0) >> dim(1) >> dim(2) >> dim(3) >> dim(4);
-    ss >> div(0) >> div(1) >> div(2) >> div(3) >> div(4);
-    ss >> deltaT;
+    ss >> cell >> dim(2) >> dim(3) >> dim(4);
+    beam = cell/4. * std::sqrt(2.);
+    dim(0) = beam - dim(2) - dim(4);
+    dim(1) = beam - dim(3) - dim(4);
+    
+    ss >> div(0) >> div(2) >> div(3) >> div(4);
+    div(1) = div(0);
+    
+    deltaT = beam * 2e6;
+    
     OctetDomain dom(dim, div, deltaT);
     
     Eigen::Vector3d flux = Eigen::Vector3d::UnitZ();
@@ -245,32 +254,32 @@ int main(int argc, const char * argv[]) {
 //    long maxscat, maxloop;
 //    ss >> maxscat >> maxloop;
 //    TrajProblem prob(&mat, &dom, maxscat, maxloop);
-//    *osmain << prob << std::endl;
+//    *osmain << prob << std::endl;kkkk
 //    *osmain << solveTraj(prob) << std::endl;
 
 //    long nemit = 1000000;
     
-//    long nemit, maxscat, maxloop;
-//    ss >> nemit >> maxscat >> maxloop;
+    long nemit, maxscat, maxloop;
+    ss >> nemit >> maxscat >> maxloop;
     
 //    TempProblem prob(&mat, &dom, nemit, maxscat, maxloop);
-//    FluxProblem prob(&mat, &dom, flux, nemit, maxscat, maxloop);
+    FluxProblem prob(&mat, &dom, flux, nemit, maxscat, maxloop);
 //    MultiProblem prob(&mat, &dom, Eigen::Matrix3d::Identity(),
 //                      nemit, maxscat, maxloop);
     
 //    long size = 10;
     
-    long nemit, size, maxscat, maxloop;
-    ss >> nemit >> size >> maxscat >> maxloop;
+//    long nemit, size, maxscat, maxloop;
+//    ss >> nemit >> size >> maxscat >> maxloop;
 
 //    CumTempProblem prob(&mat, &dom, nemit, size, maxscat, maxloop);
-    CumFluxProblem prob(&mat, &dom, flux, nemit, size, maxscat, maxloop);
+//    CumFluxProblem prob(&mat, &dom, flux, nemit, size, maxscat, maxloop);
     
     *osmain << prob << std::endl;
+    
 //    *osmain << solveField(prob, clk) << std::endl;
 //    *osmain << solveFieldN< 10 >(prob, clk) << std::endl;
-    
-    AverageEndsF<CumFluxProblem> fun(dom, dim, prob.initElem());
+    AverageEndsF<FluxProblem> fun(dom, dim, prob.initElem());
     *osmain << solveFieldN< 10 >(prob, clk, fun) << std::endl;
     
     *osmain << std::endl;
