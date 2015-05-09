@@ -25,11 +25,10 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <cmath>
 
 namespace fusion = boost::fusion;
 namespace result_of = boost::fusion::result_of;
-
-//class Domain;
 
 class Subdomain {
 protected:
@@ -98,7 +97,7 @@ public:
     const EmitPtrs& emitPtrs() const { return emitPtrs_; }
     template<typename T>
     Data<T> initData(const T& value) const {
-        return Data<T>( Collection(grid_.shape().cwiseMax(1)), value );
+        return Data<T>( Collection(grid_.shape()), value );
     }
     template<typename T>
     void accumulate(const Vector3d& begin, const Vector3d& end,
@@ -196,15 +195,175 @@ public:
         return fusion::at_c<I>(bdryCont_);
     }
     double sdomVol() const {
-        return grid_.matrix().determinant();
+        return grid_.volume();
     }
     double cellVol(const Vector3l&) const {
-        return grid_.cellVol();
+        return grid_.volume() / grid_.shape().prod();
     }
 private:
     Vector3d drawPos(Rng& gen) const {
         static UniformDist01 dist; // [0, 1)
         Vector3d coord(dist(gen), dist(gen), dist(gen));
+        return grid_.origin() + grid_.matrix()*coord;
+    }
+};
+
+template<typename Back, typename Left, typename Bottom,
+         typename Diag, typename Top = Bottom>
+class TriangularPrism : public EmitSubdomain {
+public:
+    typedef fusion::vector5<Back, Left, Bottom, Diag, Top> BdryCont;
+private:
+    BdryCont bdryCont_;
+    void init() {
+        BOOST_ASSERT_MSG(sdomVol() >= Dbl::min(),
+                         "Volume too small, check vector order");
+        fusion::for_each(bdryCont_, AddBdryF(this));
+    }
+public:
+    TriangularPrism() : EmitSubdomain() {}
+    TriangularPrism(const Vector3d& o, const Matrix3d& mat, const Vector3l& div,
+                    const Vector3d& gradT = Vector3d::Zero(),
+                    const double TBack   = 0., const double TLeft = 0.,
+                    const double TBottom = 0., const double TDiag = 0.,
+                    const double TTop    = 0.)
+    : EmitSubdomain(Grid(o, mat, div), gradT), bdryCont_(
+  Back(o,            Parallelogram(mat.col(1), mat.col(2)),              TBack),
+  Left(o,            Parallelogram(mat.col(2), mat.col(0)),              TLeft),
+Bottom(o,                 Triangle(mat.col(0), mat.col(1)),            TBottom),
+  Diag(o+mat.col(0), Parallelogram(mat.col(2), mat.col(1) - mat.col(0)), TDiag),
+   Top(o+mat.col(2),      Triangle(mat.col(1), mat.col(0)),              TTop ))
+    {
+        init();
+    }
+    TriangularPrism(const TriangularPrism& prism)
+    : EmitSubdomain(prism), bdryCont_(prism.bdryCont_)
+    {
+        init();
+    }
+    template<int I>
+    typename result_of::at_c<BdryCont, I>::type bdry() {
+        return fusion::at_c<I>(bdryCont_);
+    }
+    double sdomVol() const {
+        return grid_.volume() / 2.;
+    }
+    double cellVol(const Vector3l& index) const {
+        Vector3l shape = grid_.shape();
+        
+        Eigen::Vector2d index2 = index.head<2>().cast<double>();
+        Eigen::Vector2d shape2 = shape.head<2>().cast<double>();
+        double f0 = 1. - index2.cwiseQuotient(shape2).sum();
+        if (f0 <= 0.) return 0.;
+        
+        Eigen::Matrix<long, 2, 1> corner(1, 1);
+        double f1 = f0 - corner.cast<double>().cwiseQuotient(shape2).sum();
+        if (f1 >= 0.) return grid_.volume() / shape.prod();
+        
+        typedef Eigen::Matrix<long, 2, 2> Points;
+        static const Points pts = Points::Identity();
+        double frac = std::pow(f0, 2);
+        for (int i = 0; i < Points::ColsAtCompileTime; i++) {
+            corner = pts.col(i);
+            int sign = std::pow(-1, corner.sum());
+            double f = f0 - corner.cast<double>().cwiseQuotient(shape2).sum();
+            if (f > 0.) frac += sign * std::pow(f, 2);
+        }
+        return grid_.volume() * frac / (2.*shape(2));
+    }
+private:
+    Vector3d drawPos(Rng& gen) const {
+        static UniformDist01 dist; // [0, 1)
+        Vector3d coord(dist(gen), dist(gen), dist(gen));
+        if (coord(0) + coord(1) > 1.) {
+            coord(0) = 1. - coord(0);
+            coord(1) = 1. - coord(1);
+        }
+        return grid_.origin() + grid_.matrix()*coord;
+    }
+};
+
+template<typename Back, typename Left, typename Bottom, typename Diag>
+class Tetrahedron : public EmitSubdomain {
+public:
+    typedef fusion::vector4<Back, Left, Bottom, Diag> BdryCont;
+private:
+    BdryCont bdryCont_;
+    void init() {
+        BOOST_ASSERT_MSG(sdomVol() >= Dbl::min(),
+                         "Volume too small, check vector order");
+        fusion::for_each(bdryCont_, AddBdryF(this));
+    }
+public:
+    Tetrahedron() : EmitSubdomain() {}
+    Tetrahedron(const Vector3d& o, const Matrix3d& mat, const Vector3l& div,
+                    const Vector3d& gradT = Vector3d::Zero(),
+                    const double TBack   = 0., const double TLeft = 0.,
+                    const double TBottom = 0., const double TDiag = 0.)
+    : EmitSubdomain(Grid(o, mat, div), gradT), bdryCont_(
+  Back(o,            Triangle(mat.col(1), mat.col(2)), TBack),
+  Left(o,            Triangle(mat.col(2), mat.col(0)), TLeft),
+Bottom(o,            Triangle(mat.col(0), mat.col(1)), TBottom),
+  Diag(o+mat.col(0), Triangle(mat.col(2) - mat.col(0), mat.col(1) - mat.col(0)),
+                                                       TDiag))
+    {
+        init();
+    }
+    Tetrahedron(const Tetrahedron& tet)
+    : EmitSubdomain(tet), bdryCont_(tet.bdryCont_)
+    {
+        init();
+    }
+    template<int I>
+    typename result_of::at_c<BdryCont, I>::type bdry() {
+        return fusion::at_c<I>(bdryCont_);
+    }
+    double sdomVol() const {
+        return grid_.volume() / 6.;
+    }
+    double cellVol(const Vector3l& index) const {
+        Vector3l shape = grid_.shape();
+        
+        Vector3d index3 = index.cast<double>();
+        Vector3d shape3 = shape.cast<double>();
+        double f0 = 1. - index3.cwiseQuotient(shape3).sum();
+        if (f0 <= 0.) return 0.;
+        
+        Vector3l corner(1, 1, 1);
+        double f1 = f0 - corner.cast<double>().cwiseQuotient(shape3).sum();
+        if (f1 >= 0.) return grid_.volume() / shape.prod();
+        
+        typedef Eigen::Matrix<long, 3, 6> Points;
+        typedef Eigen::Matrix<long, 3, 3> Matrix3l;
+        static const Points pts = (Points() << Matrix3l::Identity(),
+                                   Matrix3l::Ones() - Matrix3l::Identity())
+                                  .finished();
+        double frac = std::pow(f0, 3);
+        for (int i = 0; i < Points::ColsAtCompileTime; i++) {
+            corner = pts.col(i);
+            int sign = std::pow(-1, corner.sum());
+            double f = f0 - corner.cast<double>().cwiseQuotient(shape3).sum();
+            if (f > 0.) frac += sign * std::pow(f, 3);
+        }
+        return grid_.volume() * frac / 6.;
+    }
+private:
+    Vector3d drawPos(Rng& gen) const {
+        static UniformDist01 dist; // [0, 1)
+        Vector3d coord(dist(gen), dist(gen), dist(gen));
+        if (coord(0) + coord(1) > 1.) {
+            coord(0) = 1. - coord(0);
+            coord(1) = 1. - coord(1);
+        }
+        if (coord(1) + coord(2) > 1.) {
+            double tmp = coord(2);
+            coord(2) = 1. - coord(0) - coord(1);
+            coord(1) = 1. - tmp;
+        } else if (coord.sum() > 1.) {
+            double tmp = coord(2);
+            coord(2) = coord.sum() - 1.;
+            coord(0) = 1. - coord(1) - tmp;
+        }
         return grid_.origin() + grid_.matrix()*coord;
     }
 };
@@ -219,6 +378,7 @@ protected:
     typedef DiffBoundary Diff;
     typedef InterBoundary Inter;
     typedef PeriBoundary<Parallelogram> Peri4;
+    typedef PeriBoundary<Triangle> Peri3;
 public:
     typedef std::vector<const Subdomain*> SdomPtrs;
     typedef std::vector<const Emitter*> EmitPtrs;

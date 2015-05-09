@@ -16,8 +16,7 @@ int main(int argc, const char * argv[]) {
     using std::cout;
     using std::endl;
     
-    Eigen::VectorXd vec(5);
-    vec << 1, 2, 3, 4, 5;
-    cout << vec.sum() << endl;
+    Eigen::Vector3d vec(0, 1, 2);
+    cout << vec << endl;
     return 0;
 }

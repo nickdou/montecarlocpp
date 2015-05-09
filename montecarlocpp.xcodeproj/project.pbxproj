@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		5F317C441A9684B5002A54E4 /* a.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5F317C421A9684B5002A54E4 /* a.cpp */; };
 		5F4D7B551ACDB732000D984C /* domain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5FA874FA1A84018A009E2F71 /* domain.cpp */; };
+		5F5163FB1AF9A1C700ECB126 /* domain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5FA874FA1A84018A009E2F71 /* domain.cpp */; };
+		5F5163FC1AF9EADA00ECB126 /* libboost_random.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5FACF6711A9D1E6100F76CED /* libboost_random.a */; };
 		5F956F541A72045F003CD158 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5F956F531A72045F003CD158 /* main.cpp */; };
 		5F956F5F1A733E22003CD158 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5F956F5E1A733E22003CD158 /* main.cpp */; };
 		5FACF6721A9D1E6100F76CED /* libboost_random.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5FACF6711A9D1E6100F76CED /* libboost_random.a */; };
@@ -105,6 +107,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5F5163FC1AF9EADA00ECB126 /* libboost_random.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -353,6 +356,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5F956F541A72045F003CD158 /* main.cpp in Sources */,
+				5F5163FB1AF9A1C700ECB126 /* domain.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

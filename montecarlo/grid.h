@@ -39,7 +39,7 @@ public:
 private:
     Vector3d o_;
     Matrix3d mat_, inv_;
-    Vector3l div_, max_;
+    Vector3l div_, shape_, max_;
     double vol_;
     int dim_, dir_;
     int findDir() const {
@@ -74,7 +74,7 @@ private:
     }
     Vector3l getIndex(const Vector3d& coord) const {
         Vector3l vec(floor(coord(0)), floor(coord(1)), floor(coord(2)));
-        return vec.cwiseMax(0l).cwiseMin(max_);
+        return vec.cwiseMax(0).cwiseMin(max_);
     }
     static long floor(double d) {
         return static_cast<long>(std::floor(d));
@@ -83,8 +83,9 @@ public:
     Grid() : vol_(0.) {}
     Grid(const Vector3d& o, const Matrix3d& mat, const Vector3l& div)
     : o_(o), mat_(mat), inv_(mat.inverse()),
-    div_(div), max_(div.cwiseMax(1) - Vector3l::Ones()),
-    vol_(mat.determinant() / div.cwiseMax(1).prod()),
+    div_(div), shape_(div.cwiseMax(1)),
+    max_(div.cwiseMax(1) - Vector3l::Ones()),
+    vol_(mat.determinant()),
     dim_(static_cast<int>( (div.array() > 0).count() )), dir_(0)
     {
         if (dim_ == 1) dir_ = findDir();
@@ -95,8 +96,8 @@ public:
     bool isInit() const { return vol_ != 0.; }
     const Vector3d& origin() const { return o_; }
     const Matrix3d& matrix() const { return mat_; }
-    const Vector3l& shape() const { return div_; }
-    double cellVol() const { return vol_; }
+    const Vector3l& shape() const { return shape_; }
+    double volume() const { return vol_; }
     template<typename T>
     void accumulate(const Vector3d& begin, const Vector3d& end,
                     Data<T>& data, T quant) const
