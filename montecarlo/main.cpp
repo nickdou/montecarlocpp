@@ -122,14 +122,14 @@ solveFieldN(const FieldProblem<Derived>& prob, const Clock& clk, const F& fun)
 }
 
 template<typename Derived>
-struct AverageEndsF {
+struct AverageOctetF {
     typedef typename Derived::Type Type;
     static const int nsdom = 7;
     static const int itop = 26;
     const OctetDomain* oct;
     Eigen::VectorXd weight;
     Type zero;
-    AverageEndsF(const OctetDomain& dom,
+    AverageOctetF(const OctetDomain& dom,
                  const Eigen::Matrix<double, 5, 1>& dim,
                  const Type& z)
     : oct(&dom), weight(nsdom), zero(z)
@@ -198,9 +198,13 @@ int main(int argc, const char * argv[]) {
     
     std::cout << mat << std::endl;
     
-//    Eigen::Vector3d dim(2e-6, 2e-6, 2e-6);
-//    Eigen::Matrix<long, 3, 1> div(0, 0, 0);
-//    BulkDomain dom(dim, div, 2.);
+    double l;
+    ss >> l;
+    double gradT = l * 1e6;
+    
+    Eigen::Vector3d dim(l, l, l);
+    Eigen::Matrix<long, 3, 1> div(0, 0, 0);
+    BulkDomain dom(dim, div, gradT);
     
 //    Eigen::Vector3d dim(2e-6, 2e-8, 2e-6);
 //    Eigen::Matrix<long, 3, 1> div(0, 10, 0);
@@ -218,30 +222,26 @@ int main(int argc, const char * argv[]) {
 //    div << 0, 10, 10, 10;
 //    TubeDomain dom(dim, div, 2.);
     
-//    Eigen::Vector3d flux = Eigen::Vector3d::UnitX();
+    Eigen::Vector3d flux = Eigen::Vector3d::UnitX();
     
-    double cell, beam;
-    Eigen::Matrix<double, 5, 1> dim;
-    Eigen::Matrix<long, 5, 1> div;
-    double deltaT;
-//    dim << 2e-6, 2e-6, 8e-7, 2e-7, 4e-8;
-//    div << 4, 4, 0, 0, 0;
-//    deltaT = 5.68;
-    ss >> cell >> dim(2) >> dim(3) >> dim(4);
-    beam = cell/4. * std::sqrt(2.);
-    dim(0) = beam - dim(2) - dim(4);
-    dim(1) = beam - dim(3) - dim(4);
-    BOOST_ASSERT_MSG((dim.array() > 0.).all(), "Dimensions must be positive");
-    BOOST_ASSERT_MSG(dim(2) > dim(4), "Major axis smaller than wall thickness");
-    
-    ss >> div(0) >> div(2) >> div(3) >> div(4);
-    div(1) = div(0);
-    
-    deltaT = beam * 2e6;
-    
-    OctetDomain dom(dim, div, deltaT);
-    
-    Eigen::Vector3d flux = Eigen::Vector3d::UnitZ();
+//    double cell;
+//    Eigen::Matrix<double, 5, 1> dim;
+//    ss >> cell >> dim(2) >> dim(3) >> dim(4);
+//    double beam = cell/4. * std::sqrt(2.);
+//    dim(0) = beam - dim(2) - dim(4);
+//    dim(1) = beam - dim(3) - dim(4);
+//    BOOST_ASSERT_MSG((dim.array() > 0.).all(), "Dimensions must be positive");
+//    BOOST_ASSERT_MSG(dim(2) > dim(4), "Major axis smaller than wall thickness");
+//
+//    Eigen::Matrix<long, 5, 1> div;
+//    ss >> div(0) >> div(2) >> div(3) >> div(4);
+//    div(1) = div(0);
+//    
+//    double deltaT = beam * 2e6;
+//    
+//    OctetDomain dom(dim, div, deltaT);
+//    
+//    Eigen::Vector3d flux = Eigen::Vector3d::UnitZ();
     
 //    checkAlignedDomain(&dom);
     
@@ -258,28 +258,28 @@ int main(int argc, const char * argv[]) {
 
 //    long nemit = 1000000;
     
-//    long nemit, maxscat, maxloop;
-//    ss >> nemit >> maxscat >> maxloop;
+    long nemit, maxscat, maxloop;
+    ss >> nemit >> maxscat >> maxloop;
     
 //    TempProblem prob(&mat, &dom, nemit, maxscat, maxloop);
-//    FluxProblem prob(&mat, &dom, flux, nemit, maxscat, maxloop);
+    FluxProblem prob(&mat, &dom, flux, nemit, maxscat, maxloop);
 //    MultiProblem prob(&mat, &dom, Eigen::Matrix3d::Identity(),
 //                      nemit, maxscat, maxloop);
     
 //    long size = 10;
     
-    long nemit, size, maxscat, maxloop;
-    ss >> nemit >> size >> maxscat >> maxloop;
+//    long nemit, size, maxscat, maxloop;
+//    ss >> nemit >> size >> maxscat >> maxloop;
 
 //    CumTempProblem prob(&mat, &dom, nemit, size, maxscat, maxloop);
-    CumFluxProblem prob(&mat, &dom, flux, nemit, size, maxscat, maxloop);
+//    CumFluxProblem prob(&mat, &dom, flux, nemit, size, maxscat, maxloop);
     
     std::cout << prob << std::endl;
     
 //    std::cout << solveField(prob, clk) << std::endl;
-//    std::cout << solveFieldN< 10 >(prob, clk) << std::endl;
-    AverageEndsF<CumFluxProblem> fun(dom, dim, prob.initElem());
-    std::cout << solveFieldN< 10 >(prob, clk, fun) << std::endl;
+    std::cout << solveFieldN< 10 >(prob, clk) << std::endl;
+//    AverageOctetF<CumFluxProblem> fun(dom, dim, prob.initElem());
+//    std::cout << solveFieldN< 10 >(prob, clk, fun) << std::endl;
     
     std::cout << std::endl;
     std::cout << "Total time" << std::endl;
