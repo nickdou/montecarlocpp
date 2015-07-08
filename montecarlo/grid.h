@@ -28,14 +28,14 @@ protected:
     typedef Eigen::Matrix<long, 3, 1> Vector3l;
     typedef Eigen::Vector3d Vector3d;
     typedef Eigen::Matrix3d Matrix3d;
-public:
-    class OutOfRange : public std::runtime_error {
-    public:
-        explicit OutOfRange(const char* msg)
-        : std::runtime_error(msg) {}
-        explicit OutOfRange(const std::stringstream& stream)
-        : std::runtime_error(stream.str()) {}
-    };
+//public:
+//    class OutOfRange : public std::runtime_error {
+//    public:
+//        explicit OutOfRange(const char* msg)
+//        : std::runtime_error(msg) {}
+//        explicit OutOfRange(const std::stringstream& stream)
+//        : std::runtime_error(stream.str()) {}
+//    };
 private:
     Vector3d o_;
     Matrix3d mat_, inv_;
@@ -48,31 +48,35 @@ private:
         BOOST_ASSERT_MSG(d >= 0 && d < 3, "Index out of range");
         return static_cast<int>(d);
     }
-    template<bool Check>
-    Vector3d getCoord(const Vector3d& pos) const {
-        Vector3d norm = inv_ * (pos - o_);
-        if (Check) {
-            static const double tol = 100*Dbl::epsilon();
-            bool isInside = (norm.array() >= -tol).all() &&
-                            (norm.array() <= 1. + tol).all();
-            if(!isInside) {
-#pragma omp critical
-                {
-                    std::stringstream what;
-                    Eigen::Matrix<double, 3, 4> output;
-                    output << pos, norm, norm / Dbl::epsilon(),
-                              (Vector3d::Ones() - norm) / Dbl::epsilon();
-                    Eigen::IOFormat fmt(9, 16);
-                    what << "Point outside of grid" << std::endl;
-                    what << output.transpose().format(fmt);
-                    throw(OutOfRange(what));
-                }
-            }
-            
-        }
-        return div_.cast<double>().cwiseProduct(norm);
+//    template<bool Check>
+//    Vector3d getCoord(const Vector3d& pos) const {
+//        Vector3d norm = inv_ * (pos - o_);
+//        if (Check) {
+//            static const double tol = 100*Dbl::epsilon();
+//            bool isInside = (norm.array() >= -tol).all() &&
+//                            (norm.array() <= 1. + tol).all();
+//            if(!isInside) {
+//#pragma omp critical
+//                {
+//                    std::stringstream what;
+//                    Eigen::Matrix<double, 3, 4> output;
+//                    output << pos, norm, norm / Dbl::epsilon(),
+//                              (Vector3d::Ones() - norm) / Dbl::epsilon();
+//                    Eigen::IOFormat fmt(9, 16);
+//                    what << "Point outside of grid" << std::endl;
+//                    what << output.transpose().format(fmt);
+//                    throw(OutOfRange(what));
+//                }
+//            }
+//            
+//        }
+//        return div_.cast<double>().cwiseProduct(norm);
+//    }
+    bool checkInside(const Vector3d& norm) const {
+        static const double tol = 100*Dbl::epsilon();
+        return (norm.array() >= -tol).all() && (norm.array() <= 1. + tol).all();
     }
-    Vector3l getIndex(const Vector3d& coord) const {
+    Vector3l coordToIndex(const Vector3d& coord) const {
         Vector3l vec(floor(coord(0)), floor(coord(1)), floor(coord(2)));
         return vec.cwiseMax(0).cwiseMin(max_);
     }
@@ -99,20 +103,25 @@ public:
     const Vector3l& shape() const { return shape_; }
     double volume() const { return vol_; }
     template<typename T>
-    void accumulate(const Vector3d& begin, const Vector3d& end,
+    bool accumulate(const Vector3d& begin, const Vector3d& end,
                     Data<T>& data, T quant) const
     {
         if (dim_ == 0) {
             *data.origin() += quant;
-            return;
+            return true;
         }
         
-        Vector3d bCoord = getCoord<true>(begin);
-        Vector3d eCoord = getCoord<true>(end);
+        Vector3d bNorm = inv_ * (begin - o_);
+        Vector3d eNorm = inv_ * (end - o_);
+        if (!checkInside(bNorm) || !checkInside(eNorm)) return false;
+        
+        Vector3d bCoord = div_.cast<double>().cwiseProduct(bNorm);
+        Vector3d eCoord = div_.cast<double>().cwiseProduct(eNorm);
         Vector3d dCoord = eCoord - bCoord;
-        if (dCoord.norm() < Dbl::min()) return;
-        Vector3l bIndex = getIndex(bCoord);
-        Vector3l eIndex = getIndex(eCoord);
+        if (dCoord.norm() < Dbl::min()) return true;
+        
+        Vector3l bIndex = coordToIndex(bCoord);
+        Vector3l eIndex = coordToIndex(eCoord);
         
         if (dim_ == 1) {
             long b = bIndex(dir_);
@@ -130,7 +139,7 @@ public:
             }
             if (b == e) {
                 data(bColl) += quant;
-                return;
+                return true;
             }
             T cellQuant = quant / std::abs(dCoord(dir_));
             int pm;
@@ -148,7 +157,7 @@ public:
                 iColl[dir_] = i;
                 data(iColl) += cellQuant;
             }
-            return;
+            return true;
         }
         {
             typedef std::map<double, Vector3l> Map;
@@ -174,16 +183,17 @@ public:
                 bool search = !borderMap.empty();
                 for (long i = b; i != e; i += pm) {
                     double param = (i - bCoord(d)) / dCoord(d);
-                    if (param < 0. || param > 1.) {
-#pragma omp critical
-                        {
-                            std::stringstream what;
-                            what << "Parameter out of range" << std::endl;
-                            what << std::setprecision(9) << std::setw(16);
-                            what << param;
-                            throw(OutOfRange(what));
-                        }
-                    }
+//                    if (param < 0. || param > 1.) {
+//#pragma omp critical
+//                        {
+//                            std::stringstream what;
+//                            what << "Parameter out of range" << std::endl;
+//                            what << std::setprecision(9) << std::setw(16);
+//                            what << param;
+//                            throw(OutOfRange(what));
+//                        }
+//                    }
+                    if (param < 0. || param > 1.) return false;
                     if (search) {
                         Map::iterator found = borderMap.find(param);
                         if (found != borderMap.end()) {
@@ -207,6 +217,7 @@ public:
                 index += border->second;
             }
             BOOST_ASSERT_MSG(index == eIndex, "Final index incorrect");
+            return true;
         }
     }
 };

@@ -59,21 +59,24 @@ public:
 
 class Progress {
 private:
-    long tot_, count_, div_, next_;
+    long tot_, count_, div_, next_, esc_;
     std::vector<long> vec_;
     Clock clk_;
     std::ostream* os_;
     void initVec() {
         BOOST_ASSERT_MSG(tot_ >= div_, "Too many divisions");
         for (long i = 0; i < div_; ++i) {
-            vec_.push_back(tot_ * (i+1) / div_);
+            vec_.push_back(tot_ * (i + 1) / div_);
         }
     }
 public:
     Progress()
-    : tot_(0), count_(0), div_(0), next_(0), vec_(), clk_(), os_(&std::cout) {}
+    : tot_(0), count_(0), div_(0), next_(0), esc_(0), vec_(), clk_(),
+    os_(&std::cout)
+    {}
     Progress(long tot, long div)
-    : tot_(tot), count_(0), div_(div), next_(0), vec_(), clk_(), os_(&std::cout)
+    : tot_(tot), count_(0), div_(div), next_(0), esc_(0), vec_(), clk_(),
+    os_(&std::cout)
     {
         initVec();
     }
@@ -84,16 +87,20 @@ public:
     }
     void clock(const Clock& clk) { clk_ = clk; }
     void ostream(std::ostream* os) { os_ = os; }
-    long increment() {
+    long incrCount() {
         if (tot_ == 0 || next_ >= div_) return count_;
-        count_++;
+        ++count_;
         if (count_ == vec_.at(next_)) {
             next_++;
             *os_ << clk_.stopwatch() << ' ';
             *os_ << '[' << std::string(next_, '|');
-            *os_ << std::string(div_ - next_, '-') << ']' << std::endl;
+            *os_ << std::string(div_ - next_, '-') << ']';
+            *os_ << " esc: " << esc_ << std::endl;
         }
         return count_;
+    }
+    long incrEsc() {
+        return ++esc_;
     }
 };
 
@@ -195,9 +202,9 @@ template<typename Derived>
 class FieldProblem : public Problem<Derived> {
 public:
     typedef Problem<Derived> Base;
+    typedef typename Base::Solution::Type Type;
     typedef typename ProblemTraits<Derived>::Factor Factor;
     typedef typename ProblemTraits<Derived>::AccumF AccumF;
-    typedef typename Base::Solution::Type Type;
     BOOST_MPL_ASSERT((boost::is_same< typename Base::Solution, Field<Type> >));
 protected:
     static const long loopFactor_ = 100;
@@ -372,9 +379,10 @@ public:
     CumTempProblem(const Material* mat, const Domain* dom,
                    long nemit, long size, long maxscat, long maxloop = 0)
     : Base(mat, dom, nemit, maxscat, maxloop),
-    size_(size), step_(maxscat%size == 0 ? maxscat/size : maxscat/size + 1)
+    size_(size),
+    step_((maxscat-1)%size == 0 ? (maxscat-1)/size : (maxscat-1)/size + 1)
     {}
-    Type initElem() const { return Eigen::ArrayXd::Zero(size_); }
+    Type initElem() const { return Eigen::ArrayXd::Zero(size_ + 1); }
     Solution solve(Rng& gen, Progress* prog = 0) const;
 };
 
@@ -408,9 +416,10 @@ public:
                    const Eigen::Vector3d& dir,
                    long nemit, long size, long maxscat, long maxloop = 0)
     : Base(mat, dom, nemit, maxscat, maxloop), dir_(dir),
-    size_(size), step_(maxscat%size == 0 ? maxscat/size : maxscat/size + 1)
+    size_(size),
+    step_((maxscat-1)%size == 0 ? (maxscat-1)/size : (maxscat-1)/size + 1)
     {}
-    Type initElem() const { return Eigen::ArrayXd::Zero(size_); }
+    Type initElem() const { return Eigen::ArrayXd::Zero(size_ + 1); }
     Solution solve(Rng& gen, Progress* prog = 0) const;
 };
 

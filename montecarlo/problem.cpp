@@ -24,8 +24,8 @@ namespace lambda = boost::lambda;
 
 template<typename C, typename E>
 long find(const C& cont, E elem) {
-    unsigned long index;
-    index = std::find(cont.begin(), cont.end(), elem) - cont.begin();
+//    unsigned long index;
+    long index = std::find(cont.begin(), cont.end(), elem) - cont.begin();
     return (index == cont.size() ? -1l : index);
 }
 
@@ -67,7 +67,7 @@ TrkPhonon::Trajectory TrajProblem::solve(Rng& gen, Progress* prog) const {
             nscatMat++;
         }
         if (!phn.alive() || phn.nscat() >= maxscat_) break;
-        if (prog) prog->increment();
+        if (prog) prog->incrCount();
     }
     
     return phn.trajectory();
@@ -90,38 +90,52 @@ struct CalcEmitF {
     }
 };
 
-//template<typename T, typename F, typename Enable = void>
-//struct MultiplyF {
-//    void operator()(T& element, const F& factor) const {
-//        element.array() *= factor.array();
-//    }
-//};
-//
 //template<typename T, typename F>
-//struct MultiplyF<T, F, typename boost::enable_if< boost::is_scalar<F> >::type>
-//{
-//    void operator()(T& element, F factor) const {
-//        element *= factor;
+//struct CalcFieldF {
+//    F factor;
+//    CalcFieldF(const F& fac) : factor(fac) {}
+//    void operator()(typename Field<T>::value_type& pair) const {
+//        const Subdomain* sdom = pair.first;
+//        Data<T>& data = pair.second;
+//        Collection coll(0,0,0);
+//        Eigen::Map<Collection::Vector3s> index(coll.data());
+//        typedef typename Data<T>::Size Size;
+//        for (Size k = 0; k < data.shape()[2]; ++k) {
+//            coll[2] = k;
+//            for (Size j = 0; j < data.shape()[1]; ++j) {
+//                coll[1] = j;
+//                for (Size i = 0; i < data.shape()[0]; ++i) {
+//                    coll[0] = i;
+//                    data(coll) *= factor / sdom->cellVol( index.cast<long>() );
+//                }
+//            }
+//        }
 //    }
 //};
 
-template<typename T, typename F>
+template<typename Derived>
 struct CalcFieldF {
-    F factor;
-    CalcFieldF(const F& fac) : factor(fac) {}
-    void operator()(typename Field<T>::value_type& pair) const {
+    typedef typename Derived::Type Type;
+    typedef typename Derived::Factor Factor;
+    typedef typename Derived::AccumF AccumF;
+    AccumF functor;
+    Factor factor;
+    CalcFieldF(const AccumF& fun, const Factor& pow)
+    : functor(fun), factor(pow) {}
+    void operator()(typename Field<Type>::value_type& pair) const {
         const Subdomain* sdom = pair.first;
-        Data<T>& data = pair.second;
+        Data<Type>& data = pair.second;
         Collection coll(0,0,0);
         Eigen::Map<Collection::Vector3s> index(coll.data());
-        typedef typename Data<T>::Size Size;
+        typedef typename Data<Type>::Size Size;
         for (Size k = 0; k < data.shape()[2]; ++k) {
             coll[2] = k;
             for (Size j = 0; j < data.shape()[1]; ++j) {
                 coll[1] = j;
                 for (Size i = 0; i < data.shape()[0]; ++i) {
                     coll[0] = i;
-                    data(coll) *= factor / sdom->cellVol( index.cast<long>() );
+                    data(coll) = factor / sdom->cellVol( index.cast<long>() ) *
+                                 functor( data(coll) );
                 }
             }
         }
@@ -180,17 +194,30 @@ FieldProblem<Derived>::solveField(const AccumF& fun, const Factor& fac,
                      Base::mat_->vel(phn.prop()));
             State after(time, phn, nscatMat);
             
-            try {
-                sdom->accumulate<Type>(before.phn.pos(),
-                                       after.phn.pos(),
-                                       fld[sdom],
-                                       phn.sign() * fun(before, after));
-            } catch(const Grid::OutOfRange& e) {
-#ifdef DEBUG
-                std::cerr << e.what() << std::endl;
-                std::cerr << "Trajectory" << std::endl;
-                std::cerr << phn.trajectory() << std::endl;
-#endif
+//            try {
+//                sdom->accumulate<Type>(before.phn.pos(),
+//                                       after.phn.pos(),
+//                                       fld[sdom],
+//                                       phn.sign() * fun(before, after));
+//            } catch(const Grid::OutOfRange& e) {
+//#ifdef DEBUG
+//                std::cerr << e.what() << std::endl;
+//                std::cerr << "Trajectory" << std::endl;
+//                std::cerr << phn.trajectory() << std::endl;
+//#endif
+//            }
+            bool status = sdom->accumulate<Type>(before.phn.pos(),
+                                                 after.phn.pos(),
+                                                 fld[sdom],
+                                                 phn.sign()*fun(before, after));
+            if (!status) {
+                if (prog) {
+#pragma omp critical
+                    {
+                        prog->incrEsc();
+                    }
+                }
+                break;
             }
             
             if (bdry) {
@@ -207,18 +234,22 @@ FieldProblem<Derived>::solveField(const AccumF& fun, const Factor& fac,
         if (prog) {
 #pragma omp critical
             {
-                prog->increment();
+                prog->incrCount();
             }
         }
     }
     
-    std::for_each(fld.begin(), fld.end(), CalcFieldF<Type, Factor>(fac*power));
+    std::for_each(fld.begin(), fld.end(),
+                  CalcFieldF<Derived>(fun, fac*power));
     return fld;
 }
 
 struct TempAccumF {
     double operator()(const State& before, const State& after) const {
         return after.time - before.time;
+    }
+    double operator()(double elem) const {
+        return elem;
     }
 };
 
@@ -234,6 +265,9 @@ struct FluxAccumF {
     double operator()(const State& before, const State& after) const {
         return (after.phn.pos() - before.phn.pos()).dot(dir);
     }
+    double operator()(double elem) const {
+        return elem;
+    }
 };
 
 Field<double> FluxProblem::solve(Rng& gen, Progress* prog) const {
@@ -247,6 +281,9 @@ struct MultiAccumF {
         double dtime = after.time - before.time;
         Eigen::Vector3d dpos = after.phn.pos() - before.phn.pos();
         return (Eigen::Array4d() << dtime, dpos).finished();
+    }
+    Eigen::Array4d operator()(const Eigen::Array4d& elem) const {
+        return elem;
     }
 };
 
@@ -278,9 +315,17 @@ struct CumF {
     ArrayXT operator()(const State& before, const State& after) const {
         BOOST_ASSERT_MSG(before.phn.nscat() == after.phn.nscat(),
                          "Scattering occured during advection step");
-        long index = before.phn.nscat() / step;
-        BOOST_ASSERT_MSG(index < size, "Index out of bounds");
-        return functor(before, after) * VectorXT::Unit(size, index);
+//        long index = before.phn.nscat() / step;
+        long index = (before.phn.nscat() + step - 1) / step;
+        BOOST_ASSERT_MSG(index <= size, "Index out of bounds");
+        return functor(before, after) * VectorXT::Unit(size + 1, index);
+    }
+    ArrayXT operator()(const ArrayXT& elem) const {
+        ArrayXT cumsum(elem);
+        for (long i = 1; i <= size; ++i) {
+            cumsum(i) += cumsum(i-1);
+        }
+        return cumsum;
     }
 };
 

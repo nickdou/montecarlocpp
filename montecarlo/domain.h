@@ -100,10 +100,10 @@ public:
         return Data<T>( Collection(grid_.shape()), value );
     }
     template<typename T>
-    void accumulate(const Vector3d& begin, const Vector3d& end,
+    bool accumulate(const Vector3d& begin, const Vector3d& end,
                     Data<T>& data, T quant) const
     {
-        grid_.accumulate(begin, end, data, quant);
+        return grid_.accumulate(begin, end, data, quant);
     }
     virtual double sdomVol() const = 0;
     virtual double cellVol(const Vector3l& index) const = 0;

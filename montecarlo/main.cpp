@@ -20,9 +20,27 @@
 
 typedef Dev::result_type Seed;
 
+#ifdef DEBUG
+Seed getSeed() {
+    static Seed s = 0;
+#pragma omp critical
+    {
+        s++;
+    }
+    return s - 1;
+}
+#else
 Seed getSeed() {
     static Dev urandom;
-    Seed s = urandom();
+    return urandom();
+}
+#endif
+
+void printSeed(Seed s) {
+#pragma omp single
+    {
+        std::cout << "  seeds: ";
+    }
 #pragma omp critical
     {
         std::cout << s << ' ';
@@ -32,12 +50,12 @@ Seed getSeed() {
     {
         std::cout << std::endl;
     }
-    return s;
 }
 
 TrajProblem::Solution solveTraj(const TrajProblem& prob) {
-    std::cout << "Seed" << std::endl;
-    Rng gen(getSeed());
+    Seed s = getSeed();
+    printSeed(s);
+    Rng gen(s);
     return prob.solve(gen);
 }
 
@@ -68,10 +86,11 @@ typename Derived::Solution solveField(const FieldProblem<Derived>& prob,
     Solution result = prob.initField();
     Progress prog = prob.initProgress();
     prog.clock(clk);
-    std::cout << "Seeds" << std::endl;
 #pragma omp parallel
     {
-        Rng gen(getSeed());
+        Seed s = getSeed();
+        printSeed(s);
+        Rng gen(s);
         Solution sol = prob.solve(gen, &prog);
 #pragma omp critical
         {
@@ -172,23 +191,8 @@ int main(int argc, const char * argv[]) {
     
     Clock clk;
     std::string time = clk.timestamp();
-    
-//    std::ofstream ofmain;
-//    std::string filename;
-//    ss >> filename;
-//    if (filename == "cout") {
-//        osmain = &std::cout;
-//    } else {
-//        filename = "output/" + filename;
-//        ofmain.open(filename.c_str(), std::ios::out | std::ios::trunc);
-//        ofmain.open(filename.c_str(), std::ios::out | std::ios::app);
-//        if (!ofmain.is_open()) return 1;
-//        std::cout << time << std::endl;
-//        std::cout << "Output file: " << filename << std::endl;
-//        osmain = &ofmain;
-//    }
-    
     std::cout << time << std::endl;
+    
 #ifdef DEBUG
     std::cout << "DEBUG" << std::endl;
 #endif
@@ -198,17 +202,20 @@ int main(int argc, const char * argv[]) {
     
     std::cout << mat << std::endl;
     
-    double l;
-    ss >> l;
-    double gradT = l * 1e6;
+//    double l;
+//    ss >> l;
+//    double gradT = l * 1e6;
+//    Eigen::Vector3d dim(l, l, l);
+//    Eigen::Matrix<long, 3, 1> div(0, 0, 0);
+//    BulkDomain dom(dim, div, gradT);
     
-    Eigen::Vector3d dim(l, l, l);
+    Eigen::Vector3d dim;
+    ss >> dim(0) >> dim(1);
+    dim(2) = dim(0);
+    double gradT = dim(0) * 1e6;
     Eigen::Matrix<long, 3, 1> div(0, 0, 0);
-    BulkDomain dom(dim, div, gradT);
-    
-//    Eigen::Vector3d dim(2e-6, 2e-8, 2e-6);
-//    Eigen::Matrix<long, 3, 1> div(0, 10, 0);
-//    FilmDomain dom(dim, div, 2.);
+    ss >> div(1);
+    FilmDomain dom(dim, div, gradT);
     
 //    Eigen::Matrix<double, 5, 1> dim;
 //    Eigen::Matrix<long, 5, 1> div;
@@ -232,13 +239,10 @@ int main(int argc, const char * argv[]) {
 //    dim(1) = beam - dim(3) - dim(4);
 //    BOOST_ASSERT_MSG((dim.array() > 0.).all(), "Dimensions must be positive");
 //    BOOST_ASSERT_MSG(dim(2) > dim(4), "Major axis smaller than wall thickness");
-//
 //    Eigen::Matrix<long, 5, 1> div;
 //    ss >> div(0) >> div(2) >> div(3) >> div(4);
 //    div(1) = div(0);
-//    
 //    double deltaT = beam * 2e6;
-//    
 //    OctetDomain dom(dim, div, deltaT);
 //    
 //    Eigen::Vector3d flux = Eigen::Vector3d::UnitZ();
@@ -247,32 +251,25 @@ int main(int argc, const char * argv[]) {
     
     std::cout << dom << std::endl;
     
-//    long maxscat = 100;
-//    long maxloop = 100 * maxscat;
-    
 //    long maxscat, maxloop;
 //    ss >> maxscat >> maxloop;
 //    TrajProblem prob(&mat, &dom, maxscat, maxloop);
-//    std::cout << prob << std::endl;kkkk
+//    std::cout << prob << std::endl;
 //    std::cout << solveTraj(prob) << std::endl;
-
-//    long nemit = 1000000;
     
-    long nemit, maxscat, maxloop;
-    ss >> nemit >> maxscat >> maxloop;
+//    long nemit, maxscat, maxloop;
+//    ss >> nemit >> maxscat >> maxloop;
     
 //    TempProblem prob(&mat, &dom, nemit, maxscat, maxloop);
-    FluxProblem prob(&mat, &dom, flux, nemit, maxscat, maxloop);
+//    FluxProblem prob(&mat, &dom, flux, nemit, maxscat, maxloop);
 //    MultiProblem prob(&mat, &dom, Eigen::Matrix3d::Identity(),
 //                      nemit, maxscat, maxloop);
     
-//    long size = 10;
-    
-//    long nemit, size, maxscat, maxloop;
-//    ss >> nemit >> size >> maxscat >> maxloop;
+    long nemit, size, maxscat, maxloop;
+    ss >> nemit >> size >> maxscat >> maxloop;
 
 //    CumTempProblem prob(&mat, &dom, nemit, size, maxscat, maxloop);
-//    CumFluxProblem prob(&mat, &dom, flux, nemit, size, maxscat, maxloop);
+    CumFluxProblem prob(&mat, &dom, flux, nemit, size, maxscat, maxloop);
     
     std::cout << prob << std::endl;
     
