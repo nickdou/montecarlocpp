@@ -145,7 +145,7 @@ public:
     }
     const Boundary* emitBdry() const { return 0; }
     double emitWeight() const {
-        return 2 * sdomVol() * gradT_.norm();
+        return 2. * sdomVol() * gradT_.norm();
     }
 private:
     Vector3d drawDir(Rng& gen) const {

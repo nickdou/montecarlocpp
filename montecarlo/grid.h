@@ -72,10 +72,10 @@ private:
 //        }
 //        return div_.cast<double>().cwiseProduct(norm);
 //    }
-    bool checkInside(const Vector3d& norm) const {
-        static const double tol = 100*Dbl::epsilon();
-        return (norm.array() >= -tol).all() && (norm.array() <= 1. + tol).all();
-    }
+//    bool checkInside(const Vector3d& norm) const {
+//        static const double tol = 100*Dbl::epsilon();
+//        return (norm.array() >= -tol).all() && (norm.array() <= 1. + tol).all();
+//    }
     Vector3l coordToIndex(const Vector3d& coord) const {
         Vector3l vec(floor(coord(0)), floor(coord(1)), floor(coord(2)));
         return vec.cwiseMax(0).cwiseMin(max_);
@@ -111,12 +111,12 @@ public:
             return true;
         }
         
-        Vector3d bNorm = inv_ * (begin - o_);
-        Vector3d eNorm = inv_ * (end - o_);
-        if (!checkInside(bNorm) || !checkInside(eNorm)) return false;
+//        Vector3d bNorm = inv_ * (begin - o_);
+//        Vector3d eNorm = inv_ * (end - o_);
+//        if (!checkInside(bNorm) || !checkInside(eNorm)) return false;
         
-        Vector3d bCoord = div_.cast<double>().cwiseProduct(bNorm);
-        Vector3d eCoord = div_.cast<double>().cwiseProduct(eNorm);
+        Vector3d bCoord = div_.cast<double>().cwiseProduct(inv_ * (begin - o_));
+        Vector3d eCoord = div_.cast<double>().cwiseProduct(inv_ * (end - o_));
         Vector3d dCoord = eCoord - bCoord;
         if (dCoord.norm() < Dbl::min()) return true;
         

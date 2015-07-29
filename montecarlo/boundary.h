@@ -258,7 +258,9 @@ template<typename S>
 class PeriBoundary : public EmitBoundary<S> {
 private:
     typedef Eigen::Vector3d Vector3d;
+    typedef Eigen::Matrix3d Matrix3d;
     PeriBoundary* pair_;
+    Matrix3d rot_;
     Vector3d transl_;
 public:
     PeriBoundary() : EmitBoundary<S>(), pair_(0) {}
@@ -276,28 +278,29 @@ public:
         return EmitBoundary<S>::isInit() && pair_ != 0;
     }
     const Boundary* scatter(Phonon& phn, Rng&) const {
-        phn.pos(phn.pos() + transl_);
+        phn.pos(rot_ * phn.pos() + transl_);
         return pair_;
     }
     friend void makePair(PeriBoundary& bdry1, PeriBoundary& bdry2,
-                         const Vector3d& t) {
+                         const Matrix3d& r, const Vector3d& t)
+    {
         BOOST_ASSERT_MSG(bdry1.pair_ == 0 && bdry2.pair_ == 0,
                          "Boundary already paired");
-        BOOST_ASSERT_MSG(bdry1.normal().isApprox(-bdry2.normal()),
-                         "Boundary normals not antiparallel");
-        double distance = bdry1.offset() + bdry2.offset();
-        BOOST_ASSERT_MSG(distance > 0.,
-                         "Boundary normals not inward facing");
-        BOOST_ASSERT_MSG(isApprox(t.dot(bdry1.normal()), distance),
-                         "Translation vector must span boundary planes");
         double T1 = bdry1.T_;
         double T2 = bdry2.T_;
         bdry1.T_ = T1 - T2;
         bdry2.T_ = T2 - T1;
         bdry1.pair_ = &bdry2;
         bdry2.pair_ = &bdry1;
+        bdry1.rot_ = r;
+        bdry2.rot_ = r.transpose();
         bdry1.transl_ = t;
         bdry2.transl_ = -t;
+    }
+    friend void makePair(PeriBoundary& bdry1, PeriBoundary& bdry2,
+                         const Vector3d& t)
+    {
+        makePair(bdry1, bdry2, Matrix3d::Identity(), t);
     }
 };
 
