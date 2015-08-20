@@ -287,7 +287,7 @@ double TriangularPrismImpl::cellVol(const Vector3l& index,
     for (int i = 0; i < 2; i++)
     {
         corner = pts.col(i);
-        int sign = std::pow(-1, corner.sum());
+        int sign = std::pow(-1., corner.cast<int>().sum());
         double f = f0 - corner.cast<double>().cwiseQuotient(shape2).sum();
         if (f > 0.) frac += sign * std::pow(f, 2);
     }
@@ -329,7 +329,7 @@ double TetrahedronImpl::cellVol(const Vector3l& index,
     for (int i = 0; i < 6; i++)
     {
         corner = pts.col(i);
-        int sign = std::pow(-1, corner.sum());
+        int sign = std::pow(-1., corner.cast<int>().sum());
         double f = f0 - corner.cast<double>().cwiseQuotient(shape3).sum();
         if (f > 0.) frac += sign * std::pow(f, 3);
     }
