@@ -1,0 +1,9 @@
+# .gitignore
+# Nicholas Dou
+# 20 Aug 2015
+
+*.o
+*.pbs
+Makefile
+montecarlocpp.xcodeproj/
+
