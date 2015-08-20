@@ -2,8 +2,11 @@
 # Nicholas Dou
 # 20 Aug 2015
 
+/*
+!/montecarlo
+
 *.o
 *.pbs
 Makefile
-montecarlocpp.xcodeproj/
+montecarlocpp.xcodeproj/**
 
