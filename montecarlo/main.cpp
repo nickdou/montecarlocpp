@@ -61,12 +61,15 @@ void printSeed(Seed s)
 
 TrajProblem::Solution solveTraj(const TrajProblem& prob)
 {
+    static int n = 0;
+    std::cout << "Trajectory " << n++ << std::endl;
+    
     Seed s = getSeed();
     printSeed(s);
     Rng gen(s);
     TrajProblem::Solution sol = prob.solve(gen);
     
-    std::cout << sol << std::endl;
+    std::cout << sol << std::endl << std::endl;
     return sol;
 }
 
@@ -86,7 +89,7 @@ void checkDomain(const Material* mat, const Domain* dom)
 
             std::cout << prob << std::endl;
             
-            std::cout << solveTraj(prob) << std::endl;
+            solveTraj(prob);
         }
     }
 }
@@ -96,6 +99,9 @@ typename Derived::Solution
 solveField(const FieldProblem<Derived>& prob, const Clock& clk)
 {
     typedef typename Derived::Solution Solution;
+    
+    static int n = 0;
+    std::cout << "Solution " << n++ << std::endl;
     
     Solution sol = prob.initSolution();
     Progress prog = prob.initProgress();
@@ -114,7 +120,7 @@ solveField(const FieldProblem<Derived>& prob, const Clock& clk)
         }
     }
     
-    std::cout << sol << std::endl;
+    std::cout << sol << std::endl << std::endl;
     return sol;
 }
 
@@ -127,9 +133,7 @@ solveField(const FieldProblem<Derived>& prob, const Clock& clk, long nsim)
     std::vector<Solution> sol;
     for (int i = 0; i < nsim; ++i)
     {
-        std::cout << "Solution " << i << std::endl;
         sol.push_back( solveField(prob, clk) );
-        std::cout << std::endl;
     }
     return sol;
 }
@@ -144,7 +148,7 @@ Statistics<S> calcStats(const std::vector<S>& sol)
         stats.add(*s);
     }
     
-    std::cout << stats << std::endl;
+    std::cout << stats << std::endl << std::endl;
     return stats;
 }
 
@@ -178,6 +182,8 @@ int main(int argc, const char * argv[]) {
         argss << argv[i] << ' ';
     }
     
+    std::cout << std::string(40, '-') << std::endl;
+    
     Clock clk;
     std::cout << clk.timestamp() << std::endl;
     
@@ -185,7 +191,7 @@ int main(int argc, const char * argv[]) {
     std::cout << "DEBUG" << std::endl;
 #endif
     
-    std::cout << argss.str() << std::endl;
+    std::cout << argss.str() << std::endl << std::endl;
     
     std::string prefix;
     argss >> prefix;
@@ -219,7 +225,7 @@ int main(int argc, const char * argv[]) {
     {
         BOOST_ASSERT_MSG(mat, "Invalid material");
     }
-    std::cout << *mat << std::endl;
+    std::cout << *mat << std::endl << std::endl;
     
     std::string domStr;
     argss >> domStr;
@@ -323,7 +329,7 @@ int main(int argc, const char * argv[]) {
         delete mat;
         BOOST_ASSERT_MSG(dom, "Invalid domain");
     }
-    std::cout << *dom << std::endl;
+    std::cout << *dom << std::endl << std::endl;
     
     std::string probStr;
     argss >> probStr;
@@ -343,7 +349,7 @@ int main(int argc, const char * argv[]) {
         argss >> maxscat >> maxloop;
         
         TrajProblem prob(mat, dom, maxscat, maxloop);
-        std::cout << prob << std::endl;
+        std::cout << prob << std::endl << std::endl;
         
         solveTraj(prob);
     }
@@ -352,7 +358,7 @@ int main(int argc, const char * argv[]) {
         argss >> nemit >> maxscat >> maxloop >> nsim;
         
         TempProblem prob(mat, dom, nemit, maxscat, maxloop);
-        std::cout << prob << std::endl;
+        std::cout << prob << std::endl << std::endl;
         
         if (nsim == 1l) solveField(prob, clk);
         else calcStats( solveField(prob, clk, nsim) );
@@ -363,7 +369,7 @@ int main(int argc, const char * argv[]) {
         Eigen::Vector3d dir = -(dom->gradT());
         
         FluxProblem prob(mat, dom, dir, nemit, maxscat, maxloop);
-        std::cout << prob << std::endl;
+        std::cout << prob << std::endl << std::endl;
         
         if (nsim == 1l) solveField(prob, clk);
         else calcStats( solveField(prob, clk, nsim) );
@@ -373,7 +379,7 @@ int main(int argc, const char * argv[]) {
         argss >> nemit >> maxscat >> maxloop >> nsim;
         
         MultiProblem prob(mat, dom, nemit, maxscat, maxloop);
-        std::cout << prob << std::endl;
+        std::cout << prob << std::endl << std::endl;
         
         if (nsim == 1l) solveField(prob, clk);
         else calcStats( solveField(prob, clk, nsim) );
@@ -383,7 +389,7 @@ int main(int argc, const char * argv[]) {
         argss >> nemit >> size >> maxscat >> maxloop >> nsim;
         
         CumTempProblem prob(mat, dom, nemit, size, maxscat, maxloop);
-        std::cout << prob << std::endl;
+        std::cout << prob << std::endl << std::endl;
         
         if (nsim == 1l) solveField(prob, clk);
         else calcStats( solveField(prob, clk, nsim) );
@@ -394,7 +400,7 @@ int main(int argc, const char * argv[]) {
         Eigen::Vector3d dir = -(dom->gradT());
         
         CumFluxProblem prob(mat, dom, dir, nemit, size, maxscat, maxloop);
-        std::cout << prob << std::endl;
+        std::cout << prob << std::endl << std::endl;
         
         if (nsim == 1l) solveField(prob, clk);
         else calcStats( solveField(prob, clk, nsim) );
@@ -407,7 +413,7 @@ int main(int argc, const char * argv[]) {
     }
     
     std::cout << "Total time" << std::endl;
-    std::cout << clk.stopwatch() << std::endl;
+    std::cout << clk.stopwatch() << std::endl << std::endl;
     
     delete mat;
     delete dom;

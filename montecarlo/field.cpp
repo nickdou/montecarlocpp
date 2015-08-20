@@ -12,6 +12,7 @@
 #include "subdomain.h"
 #include <boost/assert.hpp>
 #include <algorithm>
+#include <iomanip>
 #include <iostream>
 #include <cmath>
 
@@ -364,7 +365,13 @@ Field<T, N> operator/(const Field<T, N>& fld1, const Field<T, N>& fld2)
 template<typename T, int N>
 std::ostream& operator<<(std::ostream& os, const Field<T, N>& fld)
 {
-    return os << fld.data_;
+    std::ios_base::fmtflags flags = os.flags();
+    
+    os << std::setprecision(9) << std::scientific;
+    os << fld.data_;
+    
+    os.flags(flags);
+    return os;
 }
 
 template class Field<double, Eigen::Dynamic>;

@@ -97,6 +97,8 @@ long Progress::incrCount()
             std::cout << '[' << std::string(next_, '|');
             std::cout << std::string(div_ - next_, '-') << ']';
             std::cout << " esc: " << esc_ << std::endl;
+            
+            if (next_ == div_) std::cout << std::endl;
         }
     }
     return count_;
