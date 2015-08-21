@@ -162,7 +162,7 @@ TrkPhonon::Array3Xd TrkPhonon::trajectory() const
     for (std::vector<Vector3d>::const_iterator x = traj_.begin();
          x != traj_.end(); ++x)
     {
-        arr.row(i++) = *x;
+        arr.col(i++) = *x;
     }
     return arr;
 }

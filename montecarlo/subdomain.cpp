@@ -78,9 +78,9 @@ Subdomain& Subdomain::operator=(const Subdomain& sdom)
     max_ = sdom.max_;
     accum_ = sdom.accum_;
     eps_ = sdom.eps_;
+    
     return *this;
 }
-
 
 Subdomain::~Subdomain()
 {}
@@ -381,9 +381,9 @@ Eigen::VectorXd PrismImpl::volume(const Matrix3Xd& mat)
     return vol;
 }
 
-double PrismImpl::cellVol(const Vector3l&, const Vector3l& shape, double vol)
+double PrismImpl::cellVol(const Vector3l&, const Vector3l&, double vol)
 {
-    return vol / shape(2);
+    return vol;
 }
 
 Vector3d PrismImpl::drawPos(const Vector3d& o, const Matrix3Xd& mat,
@@ -393,14 +393,37 @@ Vector3d PrismImpl::drawPos(const Vector3d& o, const Matrix3Xd& mat,
     Matrix3d local;
     local << mat.col(ind+1), mat.col(ind+2), mat.col(0);
     
-    static UniformDist01 dist; // [0, 1)
-    Vector3d coord(dist(gen), dist(gen), dist(gen));
-    if (coord(0) + coord(1) > 1.)
-    {
-        coord(0) = 1. - coord(0);
-        coord(1) = 1. - coord(1);
-    }
-    
-    return o + local * coord;
+    return TriangularPrismImpl::drawPos(o, local, gen);
 }
 
+Matrix3d PyramidImpl::matBase(const Matrix3Xd& mat)
+{
+    long N = mat.cols();
+    return (Matrix3d() << mat.col(1), mat.col(N - 1), mat.col(0)).finished();
+}
+
+Eigen::VectorXd PyramidImpl::volume(const Matrix3Xd& mat)
+{
+    long N = mat.cols();
+    Eigen::VectorXd vol(N - 2);
+    for (long i = 0; i < N - 2; ++i)
+    {
+        vol(i) = mat.col(i).cross( mat.col(i + 1) ).dot( mat.col(0) ) / 6.;
+    }
+    return vol;
+}
+
+double PyramidImpl::cellVol(const Vector3l&, const Vector3l&, double vol)
+{
+    return vol;
+}
+
+Vector3d PyramidImpl::drawPos(const Vector3d& o, const Matrix3Xd& mat,
+                            const DiscreteDist& volDist, Rng& gen)
+{
+    long ind = volDist(gen);
+    Matrix3d local;
+    local << mat.col(ind+1), mat.col(ind+2), mat.col(0);
+    
+    return TetrahedronImpl::drawPos(o, local, gen);
+}

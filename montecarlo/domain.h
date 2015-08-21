@@ -124,7 +124,20 @@ private:
     
 public:
     HexDomain();
-    HexDomain(const Eigen::Matrix<double, 4, 1>& dim, long div, double deltaT);
+    HexDomain(const Eigen::Matrix<double, 4, 1>& dim, double deltaT);
+};
+
+class PyrDomain : public Domain
+{
+public:
+    typedef Pyramid< Spec, fusion::vector4<Spec, Spec, Spec, Spec> > Sdom;
+    
+private:
+    Sdom sdom_;
+    
+public:
+    PyrDomain();
+    PyrDomain(const Eigen::Matrix<double, 3, 1>& dim, double deltaT);
 };
 
 class JctDomain : public Domain

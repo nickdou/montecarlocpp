@@ -161,6 +161,15 @@ public:
         init();
     }
     
+    Parallelepiped& operator=(const Parallelepiped& p)
+    {
+        EmitSubdomain::operator=(p);
+        bdryCont_ = p.bdryCont_;
+        
+        init();
+        return *this;
+    }
+    
     template<int I>
     typename result_of::at_c<BdryCont, I>::type bdry()
     {
@@ -231,6 +240,15 @@ public:
         init();
     }
     
+    TriangularPrism& operator=(const TriangularPrism& t)
+    {
+        EmitSubdomain::operator=(t);
+        bdryCont_ = t.bdryCont_;
+        
+        init();
+        return *this;
+    }
+    
     template<int I>
     typename result_of::at_c<BdryCont, I>::type bdry()
     {
@@ -298,6 +316,15 @@ public:
         init();
     }
     
+    Tetrahedron& operator=(const Tetrahedron& t)
+    {
+        EmitSubdomain::operator=(t);
+        bdryCont_ = t.bdryCont_;
+        
+        init();
+        return *this;
+    }
+    
     template<int I>
     typename result_of::at_c<BdryCont, I>::type bdry()
     {
@@ -358,11 +385,11 @@ public:
     : EmitSubdomain()
     {}
     
-    Prism(const Vector3d& o, const Matrix3Xd& mat, long div,
+    Prism(const Vector3d& o, const Matrix3Xd& mat,
           const Vector3d& gradT = Vector3d::Zero(),
           const Eigen::VectorXd& T = Eigen::VectorXd::Zero(N + 2))
-    : EmitSubdomain(PrismImpl::volume(mat).sum(), o, PrismImpl::matBase(mat),
-                    Vector3l(0l, 0l, div), gradT),
+    : EmitSubdomain(PrismImpl::volume(mat).sum(), o,
+                    PrismImpl::matBase(mat), Vector3l::Zero(), gradT),
     mat_(mat)
     {
         BOOST_ASSERT_MSG(mat.cols() == N, "Incorrect number of matrix columns");
@@ -376,7 +403,7 @@ public:
         Bot b = Bot(o,              Polygon<N>(matBot), T(0));
         Top t = Top(o + mat.col(0), Polygon<N>(matTop), T(1));
         
-        InitSidesF initSides(o, mat, T.rightCols(N));
+        InitSidesF initSides(o, mat, T.tail(N));
         Sid s = fusion::transform(mpl::range_c<int, 0, N>(), initSides);
         
         bdryCont_ = fusion::push_front( fusion::push_front(s, t), b);
@@ -388,6 +415,17 @@ public:
     volDist_(p.volDist_)
     {
         init();
+    }
+    
+    Prism& operator=(const Prism& p)
+    {
+        EmitSubdomain::operator=(p);
+        bdryCont_ = p.bdryCont_;
+        mat_ = p.mat_;
+        volDist_ = p.volDist_;
+        
+        init();
+        return *this;
     }
     
     template<int I>
@@ -453,5 +491,147 @@ private:
         return PrismImpl::drawPos(origin(), matrix(), volDist_, gen);
     }
 };
+
+namespace PyramidImpl
+{
+    typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Matrix3Xd;
+    
+    Matrix3d matBase(const Matrix3Xd& mat);
+    Eigen::VectorXd volume(const Matrix3Xd& mat);
+    
+    double cellVol(const Vector3l& index, const Vector3l& shape, double vol);
+    Vector3d drawPos(const Vector3d& o, const Matrix3Xd& mat,
+                     const DiscreteDist& volDist, Rng& gen);
+}
+
+template<typename Bot, typename Sid>
+class Pyramid : public EmitSubdomain
+{
+private:
+    static const int N = result_of::size<Sid>::type::value;
+    
+    typedef typename result_of::push_front<Sid, Bot>::type BotSid;
+    
+public:
+    typedef typename result_of::as_vector<BotSid>::type BdryCont;
+    
+private:
+    typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Matrix3Xd;
+    
+    BdryCont bdryCont_;
+    Matrix3Xd mat_;
+    DiscreteDist volDist_;
+    
+public:
+    Pyramid()
+    : EmitSubdomain()
+    {}
+    
+    Pyramid(const Vector3d& o, const Matrix3Xd& mat,
+            const Vector3d& gradT = Vector3d::Zero(),
+            const Eigen::VectorXd& T = Eigen::VectorXd::Zero(N + 1))
+    : EmitSubdomain(PyramidImpl::volume(mat).sum(), o,
+                    PyramidImpl::matBase(mat), Vector3l::Zero(), gradT),
+    mat_(mat)
+    {
+        BOOST_ASSERT_MSG(mat.cols() == N, "Incorrect number of matrix columns");
+        
+        Eigen::VectorXd vol = PyramidImpl::volume(mat);
+        volDist_ = DiscreteDist(vol.data(), vol.data() + N - 2);
+        
+        Matrix3Xd matBot = mat.rightCols(N - 1);
+        
+        Bot b = Bot(o, Polygon<N>(matBot), T(0));
+        
+        InitSidesF initSides(o, mat, T.tail(N));
+        Sid s = fusion::transform(mpl::range_c<int, 0, N>(), initSides);
+        
+        bdryCont_ = fusion::push_front(s, b);
+        init();
+    }
+    
+    Pyramid(const Pyramid& p)
+    : EmitSubdomain(p), bdryCont_(p.bdryCont_), mat_(p.mat_),
+    volDist_(p.volDist_)
+    {
+        init();
+    }
+    
+    Pyramid& operator=(const Pyramid& p)
+    {
+        EmitSubdomain::operator=(p);
+        bdryCont_ = p.bdryCont_;
+        mat_ = p.mat_;
+        volDist_ = p.volDist_;
+        
+        init();
+        return *this;
+    }
+    
+    template<int I>
+    typename result_of::at_c<BdryCont, I>::type bdry()
+    {
+        return fusion::at_c<I>(bdryCont_);
+    }
+    
+    double cellVol(const Vector3l& index) const
+    {
+        return PyramidImpl::cellVol(index, shape(), vol());
+    }
+    
+private:
+    class InitSidesF
+    {
+    private:
+        Vector3d o_;
+        Matrix3Xd mat_;
+        Eigen::VectorXd T_;
+        
+    public:
+        InitSidesF(const Vector3d& o, const Matrix3Xd& mat,
+                   const Eigen::VectorXd& T)
+        : o_(o), mat_(mat), T_(T)
+        {}
+        
+        template<typename>
+        struct result;
+        
+        template<typename I>
+        struct result< InitSidesF(I) >
+        {
+            typedef typename result_of::value_at<Sid, I>::type type;
+        };
+        
+        template<typename I>
+        typename result_of::value_at<Sid, I>::type operator()(const I&) const
+        {
+            typedef typename result_of::value_at<Sid, I>::type S;
+            const int ind = I::value;
+            
+            Vector3d p = Vector3d::Zero();
+            if (ind != 0) p += mat_.col(ind);
+            
+            Vector3d i = mat_.col(0);
+            if (ind != 0) i -= mat_.col(ind);
+            
+            Vector3d j = -p;
+            if (ind != N - 1) j += mat_.col(ind + 1);
+            
+            return S(o_ + p, Triangle(i, j), T_(ind));
+        }
+    };
+    
+    void init()
+    {
+        BOOST_ASSERT_MSG(vol() >= Dbl::min(), "Volume too small");
+        fusion::for_each(bdryCont_, AddBdryF(this));
+    }
+    
+    Vector3d drawPos(Rng& gen) const
+    {
+        return PyramidImpl::drawPos(origin(), matrix(), volDist_, gen);
+    }
+};
+
 
 #endif

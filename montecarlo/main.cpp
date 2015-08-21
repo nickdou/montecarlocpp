@@ -87,7 +87,7 @@ void checkDomain(const Material* mat, const Domain* dom)
             
             TrajProblem prob(mat, dom, pos, dir, 2l, 2l);
 
-            std::cout << prob << std::endl;
+            std::cout << prob << std::endl << std::endl;
             
             solveTraj(prob);
         }
@@ -263,10 +263,18 @@ int main(int argc, const char * argv[]) {
         argss >> dim(0) >> dim(1);
         dim(2) = dim(1);
         dim(3) = dim(1);
-        long div0 = 0l;
         deltaT = 1e6 * dim(0);
         
-        dom = new HexDomain(dim, div0, deltaT);
+        dom = new HexDomain(dim, deltaT);
+    }
+    else if (domStr == "pyr")
+    {
+        dim.resize(3);
+        argss >> dim(0) >> dim(1);
+        dim(2) = dim(1);
+        deltaT = 1e6 * dim(0);
+        
+        dom = new PyrDomain(dim, deltaT);
     }
     else if (domStr == "jct")
     {

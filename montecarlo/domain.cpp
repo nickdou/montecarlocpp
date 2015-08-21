@@ -166,24 +166,22 @@ HexDomain::HexDomain()
 : Domain()
 {}
 
-HexDomain::HexDomain(const Eigen::Matrix<double, 4, 1>& dim, long div,
-                     double deltaT)
+HexDomain::HexDomain(const Eigen::Matrix<double, 4, 1>& dim, double deltaT)
 : Domain(Vector3d(-deltaT/dim(0), 0., 0.))
 {
     Eigen::Matrix<double, 6, 3> mat;
-    mat << dim(0),       0.,            0.,
-               0.,   dim(1),       -dim(3),
-               0., 2*dim(1),            0.,
-               0., 2*dim(1),        dim(2),
-               0.,   dim(1), dim(2)+dim(3),
-               0.,       0.,        dim(2);
-    sdom_ = Sdom(Vector3d::Zero(), mat.transpose(), div,
+    mat << dim(0),        0.,            0.,
+               0.,    dim(1),       -dim(3),
+               0., 2.*dim(1),            0.,
+               0., 2.*dim(1),        dim(2),
+               0.,    dim(1), dim(2)+dim(3),
+               0.,        0.,        dim(2);
+    sdom_ = Sdom(Vector3d::Zero(), mat.transpose(),
                  Vector3d(-deltaT/dim(0), 0., 0.));
     
     std::ostringstream ss;
     ss << "HexDomain " << static_cast<Domain*>(this) << std::endl;
-    ss << "  dim: " << dim << std::endl;
-    ss << "  div: " << div;
+    ss << "  dim: " << dim.transpose() << std::endl;
     ss << "  dT:  " << deltaT;
     info(ss.str());
     
@@ -196,10 +194,37 @@ HexDomain::HexDomain(const Eigen::Matrix<double, 4, 1>& dim, long div,
     addSdom(&sdom_);
 }
 
-JctDomain::JctDomain()
+PyrDomain::PyrDomain()
 : Domain()
 {}
 
+PyrDomain::PyrDomain(const Eigen::Matrix<double, 3, 1>& dim, double deltaT)
+: Domain(Vector3d(-deltaT/dim(0), 0., 0.))
+{
+    Eigen::Matrix<double, 4, 3> mat;
+    mat << dim(0), 0.5*dim(1), 0.5*dim(2),
+               0.,     dim(1),         0.,
+               0.,     dim(1),     dim(2),
+               0.,         0.,     dim(2);
+    sdom_ = Sdom(Vector3d::Zero(), mat.transpose(),
+                 Vector3d(-deltaT/dim(0), 0., 0.));
+    
+    std::ostringstream ss;
+    ss << "PyrDomain " << static_cast<Domain*>(this) << std::endl;
+    ss << "  dim: " << dim.transpose() << std::endl;
+    ss << "  dT:  " << deltaT;
+    info(ss.str());
+    
+    Eigen::Matrix<double, Eigen::Dynamic, 3> pts(1, 3);
+    pts << 0.5*dim(0), 0.5*dim(1), 0.5*dim(2);
+    checkpoints(pts.transpose());
+    
+    addSdom(&sdom_);
+}
+
+JctDomain::JctDomain()
+: Domain()
+{}
 
 JctDomain::JctDomain(const Eigen::Matrix<double, 4, 1>& dim,
                      const Eigen::Matrix<long, 4, 1>& div,
