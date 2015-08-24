@@ -35,10 +35,11 @@ protected:
     typedef SpecBoundary                  Spec;
     typedef DiffBoundary                  Diff;
     typedef InterBoundary                 Inter;
-    typedef IsotBoundary< Triangle >      Isot3;
-    typedef IsotBoundary< Parallelogram > Isot4;
-    typedef PeriBoundary< Triangle >      Peri3;
-    typedef PeriBoundary< Parallelogram > Peri4;
+    typedef PeriBoundary< Triangle >      PeriT;
+    typedef PeriBoundary< Parallelogram > PeriP;
+    typedef PeriBoundary< Polygon<4> >    Peri4;
+    typedef PeriBoundary< Polygon<5> >    Peri5;
+    typedef PeriBoundary< Polygon<6> >    Peri6;
     
 private:
     Subdomain::Pointers sdomPtrs_;
@@ -47,6 +48,9 @@ private:
     Vector3d gradT_;
     Matrix3Xd checkpoints_;
     std::string info_;
+    
+    Domain(const Domain& dom);
+    Domain& operator=(const Domain& dom);
     
 public:
     Domain();
@@ -90,7 +94,7 @@ public:
 class BulkDomain : public Domain
 {
 public:
-    typedef Parallelepiped<Peri4, Spec, Spec> Sdom;
+    typedef Parallelepiped<PeriP, Spec, Spec> Sdom;
     
 private:
     Sdom sdom_;
@@ -103,10 +107,12 @@ public:
 class FilmDomain : public Domain
 {
 public:
-    typedef Parallelepiped<Peri4, Diff, Spec> Sdom;
+    typedef Parallelepiped<PeriP, Diff, Spec> Sdom;
     
 private:
     Sdom sdom_;
+    
+    void init();
     
 public:
     FilmDomain();
@@ -121,6 +127,8 @@ public:
     
 private:
     Sdom sdom_;
+    
+    void init();
     
 public:
     HexDomain();
@@ -144,9 +152,9 @@ class JctDomain : public Domain
 {
 public:
     typedef fusion::vector3<
-    Parallelepiped<Peri4, Spec,  Diff, Peri4, Inter, Diff>,
-    Parallelepiped<Peri4, Inter, Diff, Inter,  Spec, Diff>,
-    Parallelepiped<Inter, Inter, Diff, Peri4,  Spec, Diff> > SdomCont;
+    Parallelepiped<PeriP, Spec,  Diff, PeriP, Inter, Diff>,
+    Parallelepiped<PeriP, Inter, Diff, Inter,  Spec, Diff>,
+    Parallelepiped<Inter, Inter, Diff, PeriP,  Spec, Diff> > SdomCont;
     
 private:
     template<int I>
@@ -172,10 +180,10 @@ class TeeDomain : public Domain
 {
 public:
     typedef fusion::vector4<
-    Parallelepiped<Peri4, Diff,  Spec, Inter, Diff,  Spec>,
+    Parallelepiped<PeriP, Diff,  Spec, Inter, Diff,  Spec>,
     Parallelepiped<Inter, Spec,  Spec, Inter, Inter, Spec>,
     Parallelepiped<Diff,  Inter, Spec, Diff,  Spec,  Spec>,
-    Parallelepiped<Inter, Diff,  Spec, Peri4, Diff,  Spec> > SdomCont;
+    Parallelepiped<Inter, Diff,  Spec, PeriP, Diff,  Spec> > SdomCont;
     
 private:
     template<int I>
@@ -201,9 +209,9 @@ class TubeDomain : public Domain
 {
 public:
     typedef fusion::vector3<
-    Parallelepiped<Peri4, Diff,  Spec,  Peri4, Diff,  Inter>,
-    Parallelepiped<Peri4, Inter, Inter, Peri4, Diff,  Diff >,
-    Parallelepiped<Peri4, Spec,  Diff,  Peri4, Inter, Diff > > SdomCont;
+    Parallelepiped<PeriP, Diff,  Spec,  PeriP, Diff,  Inter>,
+    Parallelepiped<PeriP, Inter, Inter, PeriP, Diff,  Diff >,
+    Parallelepiped<PeriP, Spec,  Diff,  PeriP, Inter, Diff > > SdomCont;
     
 private:
     template<int I>
@@ -229,13 +237,13 @@ class OctetDomain : public Domain
 {
 public:
     typedef fusion::vector33<
-    Parallelepiped<Diff,  Spec,  Peri4, Diff,  Inter, Diff >, // 00
-    Parallelepiped<Diff,  Inter, Peri4, Inter, Diff,  Diff >, // 01
-    Parallelepiped<Inter, Diff,  Peri4, Inter, Diff,  Inter>, // 02
-    Parallelepiped<Inter, Diff,  Peri4, Inter, Diff,  Inter>, // 03
-    Parallelepiped<Inter, Diff,  Peri4, Inter, Diff,  Inter>, // 04
-    Parallelepiped<Inter, Inter, Peri4, Diff,  Diff,  Inter>, // 05
-    Parallelepiped<Diff,  Spec,  Peri4, Diff,  Inter, Inter>, // 06
+    Parallelepiped<Diff,  Spec,  PeriP, Diff,  Inter, Diff >, // 00
+    Parallelepiped<Diff,  Inter, PeriP, Inter, Diff,  Diff >, // 01
+    Parallelepiped<Inter, Diff,  PeriP, Inter, Diff,  Inter>, // 02
+    Parallelepiped<Inter, Diff,  PeriP, Inter, Diff,  Inter>, // 03
+    Parallelepiped<Inter, Diff,  PeriP, Inter, Diff,  Inter>, // 04
+    Parallelepiped<Inter, Inter, PeriP, Diff,  Diff,  Inter>, // 05
+    Parallelepiped<Diff,  Spec,  PeriP, Diff,  Inter, Inter>, // 06
     
     Parallelepiped<Spec,  Diff,  Inter, Inter, Inter, Diff >, // 07
     Parallelepiped<Inter, Diff,  Inter, Inter, Inter, Inter>, // 08
@@ -259,13 +267,13 @@ public:
     Parallelepiped<Spec,  Inter, Diff,  Inter, Spec,  Diff >, // 24
     Parallelepiped<Inter, Inter, Inter, Diff,  Spec,  Diff >, // 25
     
-    Parallelepiped<Diff,  Spec,  Diff,  Diff,  Inter, Peri4>, // 26
-    Parallelepiped<Diff,  Inter, Diff,  Inter, Diff,  Peri4>, // 27
-    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Peri4>, // 28
-    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Peri4>, // 29
-    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Peri4>, // 30
-    Parallelepiped<Inter, Inter, Inter, Diff,  Diff,  Peri4>, // 31
-    Parallelepiped<Diff,  Spec,  Inter, Diff,  Inter, Peri4>  // 32
+    Parallelepiped<Diff,  Spec,  Diff,  Diff,  Inter, PeriP>, // 26
+    Parallelepiped<Diff,  Inter, Diff,  Inter, Diff,  PeriP>, // 27
+    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  PeriP>, // 28
+    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  PeriP>, // 29
+    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  PeriP>, // 30
+    Parallelepiped<Inter, Inter, Inter, Diff,  Diff,  PeriP>, // 31
+    Parallelepiped<Diff,  Spec,  Inter, Diff,  Inter, PeriP>  // 32
     > SdomCont;
     
 private:

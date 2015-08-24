@@ -44,10 +44,11 @@ void Field<T, N>::initDom()
     {
         Vector3l shape = (*s)->shape();
         long shapeProd = shape.prod();
-        BOOST_ASSERT_MSG(shapeProd > 0l, "Subdomain has no cells");
         
-        Eigen::Matrix<long, 4, 1> stride;
-        stride << ncell, 1l, shape(0), shape(0)*shape(1);
+        if (shapeProd == 0) continue;
+        
+        Eigen::Matrix<long, 5, 1> stride;
+        stride << ncell, 1l, shape(0), shape(0)*shape(1), shapeProd;
         map_[*s] = stride;
         
         ncell += shapeProd;
@@ -116,68 +117,73 @@ Field<T, N>& Field<T, N>::transform(const F& fun)
 
 template<typename T, int N>
 Eigen::Ref< typename Field<T, N>::VectorNT >
-Field<T, N>::col(const Eigen::Matrix<long, 4, 1>& stride, const Vector3l& index)
+Field<T, N>::col(const Eigen::Matrix<long, 5, 1>& stride, const Vector3l& index)
 {
-    return data_.col(stride(0) + stride.tail<3>().dot(index));
+    return data_.col(stride(0) + stride.segment<3>(1).dot(index));
 }
 
 template<typename T, int N>
 Field<T, N>& Field<T, N>::accumulate(const Subdomain* sdom,
-                                     const Vector3d& ipos, const Vector3d& fpos,
+                                     const Vector3d& bpos, const Vector3d& epos,
                                      const VectorNT& amount)
 {
     setRows(amount.rows());
     
+    int flag = sdom->accumFlag();
+    if (flag < -1)
+    {
+        return *this;
+    }
+    
     Map::const_iterator it = map_.find(sdom);
     BOOST_ASSERT_MSG(it != map_.end(), "Subdomain not found in field");
-    Eigen::Matrix<long, 4, 1> stride = it->second;
+    Eigen::Matrix<long, 5, 1> stride = it->second;
     
-    int flag = sdom->accumFlag();
     if (flag < 0)
     {
         col(stride, Vector3l::Zero()) += amount;
         return *this;
     }
     
-    Vector3d icoord = sdom->coord(ipos);
-    Vector3d fcoord = sdom->coord(fpos);
-    Vector3d dcoord = fcoord - icoord;
+    Vector3d bcoord = sdom->coord(bpos);
+    Vector3d ecoord = sdom->coord(epos);
+    Vector3d dcoord = ecoord - bcoord;
     
-    Vector3l iindex = sdom->coord2index(icoord);
-    Vector3l findex = sdom->coord2index(fcoord);
+    Vector3l bindex = sdom->coord2index(bcoord);
+    Vector3l eindex = sdom->coord2index(ecoord);
 
     if (flag < 3)
     {
         long d = flag;
-        long i = iindex(d);
-        long f = findex(d);
+        long b = bindex(d);
+        long e = eindex(d);
         
-        Vector3l ivec = i * Vector3l::Unit(d);
-        Vector3l fvec = f * Vector3l::Unit(d);
+        Vector3l bvec = b * Vector3l::Unit(d);
+        Vector3l evec = e * Vector3l::Unit(d);
         
-        if (i == f)
+        if (b == e)
         {
-            col(stride, ivec) += amount;
+            col(stride, bvec) += amount;
             return *this;
         }
         
         VectorNT cellAmount = amount / std::abs(dcoord(d));
         int pm;
-        if (i < f)
+        if (b < e)
         {
-            col(stride, ivec) += cellAmount * (1l + i - icoord(d));
-            col(stride, fvec) += cellAmount * (fcoord(d) - f);
+            col(stride, bvec) += cellAmount * (1l + b - bcoord(d));
+            col(stride, evec) += cellAmount * (ecoord(d) - e);
             pm = 1;
         }
         else
         {
-            col(stride, ivec) += cellAmount * (icoord(d) - i);
-            col(stride, fvec) += cellAmount * (1l + f - fcoord(d));
+            col(stride, bvec) += cellAmount * (bcoord(d) - b);
+            col(stride, evec) += cellAmount * (1l + e - ecoord(d));
             pm = -1;
         }
         
         Vector3l nvec = Vector3l::Zero();
-        for (long n = i + pm; n != f; n += pm)
+        for (long n = b + pm; n != e; n += pm)
         {
             nvec(d) = n;
             col(stride, nvec) += cellAmount;
@@ -191,17 +197,17 @@ Field<T, N>& Field<T, N>::accumulate(const Subdomain* sdom,
         {
             if (std::abs(dcoord(d)) < Dbl::min()) continue;
             
-            long i = iindex(d);
-            long f = findex(d);
+            long b = bindex(d);
+            long e = eindex(d);
             int pm;
-            if (i == f)
+            if (b == e)
             {
                 continue;
             }
-            else if (i < f)
+            else if (b < e)
             {
-                i++;
-                f++;
+                b++;
+                e++;
                 pm = 1;
             }
             else
@@ -212,9 +218,9 @@ Field<T, N>& Field<T, N>::accumulate(const Subdomain* sdom,
             ins = borders.begin();
             Vector3l step = pm * Vector3l::Unit(d);
             bool search = !borders.empty();
-            for (long n = i; n != f; n += pm)
+            for (long n = b; n != e; n += pm)
             {
-                double param = (n - icoord(d)) / dcoord(d);
+                double param = (n - bcoord(d)) / dcoord(d);
                 
                 if (search)
                 {
@@ -235,16 +241,16 @@ Field<T, N>& Field<T, N>::accumulate(const Subdomain* sdom,
         std::map<double, Vector3l>::value_type pairEnd(1., Vector3l::Zero());
         borders.insert(ins, pairEnd);
         
-        Vector3l index = iindex;
+        Vector3l index = bindex;
         double param = 0.;
-        for (std::map<double, Vector3l>::const_iterator b = borders.begin();
-             b != borders.end(); ++b)
+        for (std::map<double, Vector3l>::const_iterator it = borders.begin();
+             it != borders.end(); ++it)
         {
-            col(stride, index) += amount * (b->first - param);
-            param = b->first;
-            index += b->second;
+            col(stride, index) += amount * (it->first - param);
+            param = it->first;
+            index += it->second;
         }
-        BOOST_ASSERT_MSG(index == findex, "Final index incorrect");
+        BOOST_ASSERT_MSG(index == eindex, "Final index incorrect");
     }
     return *this;
 }

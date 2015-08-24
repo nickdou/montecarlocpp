@@ -44,20 +44,29 @@ Subdomain::Subdomain(double vol, const Vector3d& o, const Matrix3d& mat,
 div_(div), shape_(div.cwiseMax(1l)), max_(div.cwiseMax(1l) - Vector3l::Ones()),
 eps_(100. * Dbl::epsilon() * mat.colwise().norm().minCoeff())
 {
-    int dim = static_cast<int>( (div.array() > 0).count() );
-    if (dim == 0)
+    long dim = (div.array() < 0l).any() ? -1l : (div.array() > 0l).count();
+    switch (dim)
     {
-        accum_ = -1;
-    }
-    else if (dim == 1)
-    {
-        Vector3l::Index dir;
-        div_.maxCoeff(&dir);
-        accum_ = static_cast<int>(dir);
-    }
-    else
-    {
-        accum_ = 3;
+        case -1l :
+            shape_ = Vector3l::Zero();
+            max_ = Vector3l::Zero();
+            accum_ = -2;
+            break;
+            
+        case 0l :
+            accum_ = -1;
+            break;
+            
+        case 1l :
+            Vector3l::Index dir;
+            div_.maxCoeff(&dir);
+            accum_ = static_cast<int>(dir); // = {0, 1, 2}
+            break;
+            
+        case 2l :
+        case 3l :
+            accum_ = static_cast<int>(dim) + 1; // = {3, 4}
+            break;
     }
 }
 

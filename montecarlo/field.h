@@ -48,7 +48,7 @@ public:
 private:
     typedef Eigen::Array<T, N, Eigen::Dynamic> ArrayNXT;
     typedef Eigen::Matrix<T, N, 1> VectorNT;
-    typedef std::map< const Subdomain*, Eigen::Matrix<long, 4, 1> > Map;
+    typedef std::map< const Subdomain*, Eigen::Matrix<long, 5, 1> > Map;
     
     const Domain* dom_;
     Map map_;
@@ -81,7 +81,7 @@ public:
     friend std::ostream& operator<< <>(std::ostream& os, const Field& fld);
     
 private:
-    Eigen::Ref<VectorNT> col(const Eigen::Matrix<long, 4, 1>& stride,
+    Eigen::Ref<VectorNT> col(const Eigen::Matrix<long, 5, 1>& stride,
                              const Vector3l& index);
     ArrayNXT match(const Field& fld);
 };
