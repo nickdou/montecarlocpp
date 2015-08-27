@@ -385,11 +385,12 @@ public:
     : EmitSubdomain()
     {}
     
-    Prism(const Vector3d& o, const Matrix3Xd& mat,
+    Prism(const Vector3d& o, const Matrix3Xd& mat, long div,
           const Vector3d& gradT = Vector3d::Zero(),
           const Eigen::VectorXd& T = Eigen::VectorXd::Zero(N + 2))
     : EmitSubdomain(PrismImpl::volume(mat).sum(), o,
-                    PrismImpl::matBase(mat), Vector3l::Zero(), gradT),
+                    PrismImpl::matBase(mat),
+                    Vector3l::Constant(div < 0l ? -1l : 0l), gradT),
     mat_(mat)
     {
         BOOST_ASSERT_MSG(mat.cols() == N, "Incorrect number of matrix columns");
@@ -527,11 +528,12 @@ public:
     : EmitSubdomain()
     {}
     
-    Pyramid(const Vector3d& o, const Matrix3Xd& mat,
+    Pyramid(const Vector3d& o, const Matrix3Xd& mat, long div,
             const Vector3d& gradT = Vector3d::Zero(),
             const Eigen::VectorXd& T = Eigen::VectorXd::Zero(N + 1))
     : EmitSubdomain(PyramidImpl::volume(mat).sum(), o,
-                    PyramidImpl::matBase(mat), Vector3l::Zero(), gradT),
+                    PyramidImpl::matBase(mat),
+                    Vector3l::Constant(div < 0l ? -1l : 0l), gradT),
     mat_(mat)
     {
         BOOST_ASSERT_MSG(mat.cols() == N, "Incorrect number of matrix columns");

@@ -13,7 +13,7 @@
 #include "boundary.h"
 #include <Eigen/Core>
 #include <boost/fusion/sequence/intrinsic.hpp>
-#include <boost/fusion/container/vector/vector40.hpp>
+#include <boost/fusion/container/vector/vector50.hpp>
 #include <boost/fusion/container/vector/vector10.hpp>
 #include <iostream>
 #include <string>
@@ -236,44 +236,54 @@ public:
 class OctetDomain : public Domain
 {
 public:
-    typedef fusion::vector33<
-    Parallelepiped<Diff,  Spec,  PeriP, Diff,  Inter, Diff >, // 00
-    Parallelepiped<Diff,  Inter, PeriP, Inter, Diff,  Diff >, // 01
-    Parallelepiped<Inter, Diff,  PeriP, Inter, Diff,  Inter>, // 02
-    Parallelepiped<Inter, Diff,  PeriP, Inter, Diff,  Inter>, // 03
-    Parallelepiped<Inter, Diff,  PeriP, Inter, Diff,  Inter>, // 04
-    Parallelepiped<Inter, Inter, PeriP, Diff,  Diff,  Inter>, // 05
-    Parallelepiped<Diff,  Spec,  PeriP, Diff,  Inter, Inter>, // 06
+    typedef fusion::vector42<
+    Prism< Inter, Peri4, fusion::vector4< Inter, Diff,  Spec,  Diff  > >, // 00
+    Prism< Diff,  Inter, fusion::vector4< Inter, Diff,  Spec,  Inter > >, // 01
+    Prism< Diff,  Diff,  fusion::vector4< Inter, Inter, Spec,  Spec  > >, // 02
+    Prism< Inter, Peri4, fusion::vector4< Diff,  Inter, Inter, Diff  > >, // 03
+    Prism< Inter, Inter, fusion::vector4< Diff,  Inter, Inter, Inter > >, // 04
+    Parallelepiped< Inter, Spec,  Diff,  Diff,  Inter, Inter >,           // 05
     
-    Parallelepiped<Spec,  Diff,  Inter, Inter, Inter, Diff >, // 07
-    Parallelepiped<Inter, Diff,  Inter, Inter, Inter, Inter>, // 08
-    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Inter>, // 09
-    Parallelepiped<Inter, Inter, Inter, Diff,  Diff,  Inter>, // 10
-    Parallelepiped<Diff,  Spec,  Inter, Diff,  Inter, Inter>, // 11
-    Parallelepiped<Spec,  Inter, Diff,  Inter, Spec,  Diff >, // 12
-    Parallelepiped<Inter, Inter, Diff,  Diff,  Spec,  Inter>, // 13
+    Prism< Spec,  Inter, fusion::vector4< PeriP, Diff,  Inter, Diff  > >, // 06
+    Prism< Inter, Diff,  fusion::vector4< PeriP, Diff,  Inter, Inter > >, // 07
+    Prism< Diff,  Diff,  fusion::vector4< PeriP, Inter, Inter, Inter > >, // 08
+    Prism< Diff,  Diff,  fusion::vector4< Inter, Inter, Inter, Inter > >, // 09
+    Prism< Inter, Diff,  fusion::vector4< Inter, Inter, Diff,  Inter > >, // 10
+    Prism< Spec,  Inter, fusion::vector4< Diff,  Inter, Diff,  Inter > >, // 11
+    TriangularPrism< Diff,  Inter, Inter, Spec,  Inter >,                 // 12
+    Pyramid< Inter, fusion::vector4< Diff,  Inter, Spec,  Inter > >,      // 13
+    TriangularPrism< Inter, Inter, Diff,  Spec,  Inter >,                 // 14
+    Prism< Diff,  Diff,  fusion::vector4< Inter, Inter, Spec,  Spec  > >, // 15
     
-    Parallelepiped<Diff,  Diff,  Inter, Inter, Inter, Inter>, // 14
-    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Inter>, // 15
-    Parallelepiped<Inter, Inter, Inter, Diff,  Diff,  Inter>, // 16
-    Parallelepiped<Diff,  Spec,  Inter, Diff,  Inter, Inter>, // 17
-    Parallelepiped<Diff,  Inter, Inter, Diff,  Spec,  Inter>, // 18
+    Parallelepiped< Diff,  Spec,  Inter, Diff,  Inter, Inter >,           // 16
+    Parallelepiped< Inter, Inter, Inter, Diff,  Diff,  Inter >,           // 17
+    Parallelepiped< Inter, Diff,  Inter, Inter, Diff,  Inter >,           // 18
+    Parallelepiped< Diff,  Inter, Inter, Inter, Diff,  Inter >,           // 19
+    Parallelepiped< Diff,  Spec,  Inter, Diff,  Inter, Inter >,           // 20
+
+    Parallelepiped< Diff,  Spec,  Inter, Diff,  Inter, Inter >,           // 21
+    Parallelepiped< Diff,  Inter, Inter, Inter, Diff,  Inter >,           // 22
+    Parallelepiped< Inter, Diff,  Inter, Inter, Diff,  Inter >,           // 23
+    Parallelepiped< Inter, Inter, Inter, Diff,  Diff,  Inter >,           // 24
+    Parallelepiped< Diff,  Spec,  Inter, Diff,  Inter, Inter >,           // 25
     
-    Parallelepiped<Spec,  Diff,  Diff , Inter, Inter, Inter>, // 19
-    Parallelepiped<Inter, Diff,  Inter, Inter, Inter, Inter>, // 20
-    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Inter>, // 21
-    Parallelepiped<Inter, Inter, Inter, Diff,  Diff,  Inter>, // 22
-    Parallelepiped<Diff,  Spec,  Inter, Diff,  Inter, Inter>, // 23
-    Parallelepiped<Spec,  Inter, Diff,  Inter, Spec,  Diff >, // 24
-    Parallelepiped<Inter, Inter, Inter, Diff,  Spec,  Diff >, // 25
-    
-    Parallelepiped<Diff,  Spec,  Diff,  Diff,  Inter, PeriP>, // 26
-    Parallelepiped<Diff,  Inter, Diff,  Inter, Diff,  PeriP>, // 27
-    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  PeriP>, // 28
-    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  PeriP>, // 29
-    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  PeriP>, // 30
-    Parallelepiped<Inter, Inter, Inter, Diff,  Diff,  PeriP>, // 31
-    Parallelepiped<Diff,  Spec,  Inter, Diff,  Inter, PeriP>  // 32
+    Prism< Diff,  Diff,  fusion::vector4< Inter, Inter, Spec,  Spec  > >, // 26
+    TriangularPrism< Inter, Inter, Diff,  Spec,  Inter >,                 // 27
+    Pyramid< Inter, fusion::vector4< Diff,  Inter, Spec,  Inter > >,      // 28
+    TriangularPrism< Diff,  Inter, Inter, Spec,  Inter >,                 // 29
+    Prism< Spec,  Inter, fusion::vector4< Diff,  Inter, Diff,  Inter > >, // 30
+    Prism< Inter, Diff,  fusion::vector4< Inter, Inter, Diff,  Inter > >, // 31
+    Prism< Diff,  Diff,  fusion::vector4< Inter, Inter, Inter, Inter > >, // 32
+    Prism< Diff,  Diff,  fusion::vector4< PeriP, Inter, Inter, Inter > >, // 33
+    Prism< Inter, Diff,  fusion::vector4< PeriP, Diff,  Inter, Inter > >, // 34
+    Prism< Spec,  Inter, fusion::vector4< PeriP, Diff,  Inter, Diff  > >, // 35
+
+    Parallelepiped< Inter, Spec,  Diff,  Diff,  Inter, Inter >,           // 36
+    Prism< Inter, Inter, fusion::vector4< Diff,  Inter, Inter, Inter > >, // 37
+    Prism< Inter, Peri4, fusion::vector4< Diff,  Inter, Inter, Diff  > >, // 38
+    Prism< Diff,  Diff,  fusion::vector4< Inter, Inter, Spec,  Spec  > >, // 39
+    Prism< Diff,  Inter, fusion::vector4< Inter, Diff,  Spec,  Inter > >, // 40
+    Prism< Inter, Peri4, fusion::vector4< Inter, Diff,  Spec,  Diff  > >  // 41
     > SdomCont;
     
 private:
@@ -285,8 +295,8 @@ private:
     
 public:
     OctetDomain();
-    OctetDomain(const Eigen::Matrix<double, 5, 1>& dim,
-                const Eigen::Matrix<long, 5, 1>& div,
+    OctetDomain(const Eigen::Matrix<double, 4, 1>& dim,
+                const Eigen::Matrix<long, 4, 1>& div,
                 double deltaT);
     
     template<int I>
@@ -294,7 +304,32 @@ public:
     {
         return fusion::at_c<I>(sdomCont_);
     }
+    
+    template<typename T, int N>
+    class AverageF;
 };
+
+template<typename T, int N>
+class Field;
+
+template<typename T, int N>
+class OctetDomain::AverageF
+{
+public:
+    typedef Eigen::Matrix<double, N, 1> VectorNT;
+    typedef Eigen::Matrix<long, 3, 1> Vector3l;
+    
+private:
+    const OctetDomain* dom_;
+    Subdomain::Pointers sdomAvg_;
+    
+public:
+    AverageF(const OctetDomain& dom);
+    
+    VectorNT operator()(const Subdomain* sdom, const Vector3l& index) const;
+    VectorNT operator()(const Field<T, N>& fld) const;
+};
+
 
 //class Subdomain {
 //protected:
@@ -749,6 +784,69 @@ public:
 //            coord(0) = 1. - coord(1) - tmp;
 //        }
 //        return grid_.origin() + grid_.matrix()*coord;
+//    }
+//};
+//
+//class OctetDomain : public Domain
+//{
+//public:
+//    typedef fusion::vector33<
+//    Parallelepiped<Diff,  Spec,  PeriP, Diff,  Inter, Diff >, // 00
+//    Parallelepiped<Diff,  Inter, PeriP, Inter, Diff,  Diff >, // 01
+//    Parallelepiped<Inter, Diff,  PeriP, Inter, Diff,  Inter>, // 02
+//    Parallelepiped<Inter, Diff,  PeriP, Inter, Diff,  Inter>, // 03
+//    Parallelepiped<Inter, Diff,  PeriP, Inter, Diff,  Inter>, // 04
+//    Parallelepiped<Inter, Inter, PeriP, Diff,  Diff,  Inter>, // 05
+//    Parallelepiped<Diff,  Spec,  PeriP, Diff,  Inter, Inter>, // 06
+//    
+//    Parallelepiped<Spec,  Diff,  Inter, Inter, Inter, Diff >, // 07
+//    Parallelepiped<Inter, Diff,  Inter, Inter, Inter, Inter>, // 08
+//    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Inter>, // 09
+//    Parallelepiped<Inter, Inter, Inter, Diff,  Diff,  Inter>, // 10
+//    Parallelepiped<Diff,  Spec,  Inter, Diff,  Inter, Inter>, // 11
+//    Parallelepiped<Spec,  Inter, Diff,  Inter, Spec,  Diff >, // 12
+//    Parallelepiped<Inter, Inter, Diff,  Diff,  Spec,  Inter>, // 13
+//    
+//    Parallelepiped<Diff,  Diff,  Inter, Inter, Inter, Inter>, // 14
+//    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Inter>, // 15
+//    Parallelepiped<Inter, Inter, Inter, Diff,  Diff,  Inter>, // 16
+//    Parallelepiped<Diff,  Spec,  Inter, Diff,  Inter, Inter>, // 17
+//    Parallelepiped<Diff,  Inter, Inter, Diff,  Spec,  Inter>, // 18
+//    
+//    Parallelepiped<Spec,  Diff,  Diff , Inter, Inter, Inter>, // 19
+//    Parallelepiped<Inter, Diff,  Inter, Inter, Inter, Inter>, // 20
+//    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  Inter>, // 21
+//    Parallelepiped<Inter, Inter, Inter, Diff,  Diff,  Inter>, // 22
+//    Parallelepiped<Diff,  Spec,  Inter, Diff,  Inter, Inter>, // 23
+//    Parallelepiped<Spec,  Inter, Diff,  Inter, Spec,  Diff >, // 24
+//    Parallelepiped<Inter, Inter, Inter, Diff,  Spec,  Diff >, // 25
+//    
+//    Parallelepiped<Diff,  Spec,  Diff,  Diff,  Inter, PeriP>, // 26
+//    Parallelepiped<Diff,  Inter, Diff,  Inter, Diff,  PeriP>, // 27
+//    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  PeriP>, // 28
+//    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  PeriP>, // 29
+//    Parallelepiped<Inter, Diff,  Inter, Inter, Diff,  PeriP>, // 30
+//    Parallelepiped<Inter, Inter, Inter, Diff,  Diff,  PeriP>, // 31
+//    Parallelepiped<Diff,  Spec,  Inter, Diff,  Inter, PeriP>  // 32
+//    > SdomCont;
+//    
+//private:
+//    template<int I>
+//    struct Sdom : result_of::value_at_c<SdomCont, I>
+//    {};
+//    
+//    SdomCont sdomCont_;
+//    
+//public:
+//    OctetDomain();
+//    OctetDomain(const Eigen::Matrix<double, 5, 1>& dim,
+//                const Eigen::Matrix<long, 5, 1>& div,
+//                double deltaT);
+//    
+//    template<int I>
+//    typename result_of::at_c<SdomCont, I>::type sdom()
+//    {
+//        return fusion::at_c<I>(sdomCont_);
 //    }
 //};
 

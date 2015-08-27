@@ -78,6 +78,10 @@ public:
     Field& operator*=(const Field& fld);
     Field& operator/=(const Field& fld);
     
+    VectorNT average(const Field& weight = Field( static_cast<T>(1) )) const;
+    
+    const ArrayNXT& data() const;
+    
     friend std::ostream& operator<< <>(std::ostream& os, const Field& fld);
     
 private:

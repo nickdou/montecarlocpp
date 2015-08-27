@@ -59,8 +59,6 @@ public:
     
     long incrCount();
     long incrEsc();
-    
-    void count(long n);
 };
 
 template<typename Derived>
@@ -105,14 +103,14 @@ class TrajProblem;
 template<>
 struct ProbTraits<TrajProblem>
 {
-    typedef TrkPhonon::Array3Xd Solution;
+    typedef TrkPhonon::Matrix3Xd Solution;
 };
 
 class TrajProblem : public Problem<TrajProblem>
 {
 public:
     typedef Problem<TrajProblem> Base;
-    typedef TrkPhonon::Array3Xd Solution;
+    typedef TrkPhonon::Matrix3Xd Solution;
     
 private:
     static const long loopFactor_ = 100;
@@ -142,7 +140,7 @@ public:
                 long maxscat = 100l, long maxloop = 0l);
     
     Progress initProgress() const;
-    Solution solve(Rng& gen, Progress* prog = 0) const;
+    Solution solve(Rng& gen, Progress* prog) const;
 };
 
 template<typename T, int N>
@@ -194,7 +192,7 @@ public:
     Progress initProgress() const;
     Solution initSolution() const;
     
-    Solution solve(Rng& gen, Progress* prog = 0) const;
+    Solution solve(Rng& gen, Progress* prog) const;
     
 private:
     virtual VectorNT postMult() const = 0;

@@ -59,39 +59,65 @@ void printSeed(Seed s)
     }
 }
 
-TrajProblem::Solution solveTraj(const TrajProblem& prob)
+TrajProblem::Solution solveTraj(const TrajProblem& prob, const Clock& clk)
 {
     static int n = 0;
     std::cout << "Trajectory " << n++ << std::endl;
     
+    Progress prog = prob.initProgress();
+    prog.clock(clk);
+    
     Seed s = getSeed();
     printSeed(s);
     Rng gen(s);
-    TrajProblem::Solution sol = prob.solve(gen);
+    TrajProblem::Solution sol = prob.solve(gen, &prog);
     
     std::cout << sol << std::endl << std::endl;
     return sol;
 }
 
-void checkDomain(const Material* mat, const Domain* dom)
+Eigen::Matrix<double, 3, Eigen::Dynamic>
+checkDomain(const Material* mat, const Domain* dom, const Eigen::Matrix3d& rot,
+            const Clock& clk)
 {
-    Eigen::Matrix<double, 3, Eigen::Dynamic> pts = dom->checkpoints();
+    typedef TrajProblem::Solution Solution;
+    typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Matrix3Xd;
     
-    for (int j = 0; j < pts.cols(); ++j)
+    std::vector<Solution> traj;
+    std::vector<long> ind;
+    ind.push_back(0l);
+    
+    Matrix3Xd pts = dom->checkpoints();
+    for (int p = 0; p < pts.cols(); ++p)
     {
-        Eigen::Vector3d pos = pts.col(j);
+        Eigen::Vector3d pos = pts.col(p);
         for (int i = 0; i < 6; ++i)
         {
-            Eigen::Vector3d dir = Eigen::Vector3d::Unit(i % 3);
+            Eigen::Vector3d dir = rot.col(i % 3);
             if (i >= 3) dir *= -1;
             
             TrajProblem prob(mat, dom, pos, dir, 2l, 2l);
 
             std::cout << prob << std::endl << std::endl;
             
-            solveTraj(prob);
+            traj.push_back( solveTraj(prob, clk) );
+            
+            ind.push_back(ind.back() + traj.back().cols() + 1l);
         }
     }
+    
+    Matrix3Xd sol(3, ind.back() - 1l);
+    sol.setConstant( Dbl::quiet_NaN() );
+    for (long n = 0l; n < traj.size(); ++n)
+    {
+        long j = ind.at(n);
+        long cols = ind.at(n + 1l) - ind.at(n) - 1l;
+        sol.block(0l, j, 3l, cols) = traj.at(n);
+    }
+    
+    std::cout << "Combined Trajectory" << std::endl;
+    std::cout << sol << std::endl << std::endl;
+    return sol;
 }
 
 template<typename Derived>
@@ -126,7 +152,7 @@ solveField(const FieldProblem<Derived>& prob, const Clock& clk)
 
 template<typename Derived>
 std::vector< typename Derived::Solution >
-solveField(const FieldProblem<Derived>& prob, const Clock& clk, long nsim)
+solveField(const FieldProblem<Derived>& prob, long nsim, const Clock& clk)
 {
     typedef typename Derived::Solution Solution;
     
@@ -168,8 +194,8 @@ Statistics<S> calcStats(const std::vector<S>& sol)
 // tube  [dim(0)] [dim(1,2)] [dim(3)]      [div(1,2)] [div(3)]
 // octet [cell] [dim(2)] [dim(3)] [dim(4)] [div(0,1)] [div(2)] [div(3)] [div(4)]
 
-// check
-// traj                   [maxscat] [maxloop]
+// check   [rot]
+// traj    [pos]   [dir]  [maxscat] [maxloop]
 // temp    [nemit]        [maxscat] [maxloop] [nsim]
 // flux    [nemit]        [maxscat] [maxloop] [nsim]
 // multi   [nemit]        [maxscat] [maxloop] [nsim]
@@ -315,23 +341,35 @@ int main(int argc, const char * argv[]) {
     }
     else if (domStr == "octet")
     {
-        double cell;
-        dim.resize(5);
-        argss >> cell >> dim(2) >> dim(3) >> dim(4);
-        double beam = cell/4. * std::sqrt(2.);
-        dim(0) = beam - dim(2) - dim(4);
-        dim(1) = beam - dim(3) - dim(4);
+        dim.resize(4);
+        argss >> dim(0) >> dim(1) >> dim(2) >> dim(3);
+        div.resize(4);
+        argss >> div(0) >> div(1) >> div(2) >> div(3);
+        argss >> deltaT;
         BOOST_ASSERT_MSG((dim.array() > 0.).all(),
                          "Dimensions must be positive");
-        BOOST_ASSERT_MSG(dim(2) > dim(4),
-                         "Major axis smaller than wall thickness");
-        div.resize(5);
-        argss >> div(0) >> div(2) >> div(3) >> div(4);
-        div(1) = div(0);
-        deltaT = 2e6 * beam;
         
         dom = new OctetDomain(dim, div, deltaT);
     }
+//    else if (domStr == "octet")
+//    {
+//        double cell;
+//        dim.resize(5);
+//        argss >> cell >> dim(2) >> dim(3) >> dim(4);
+//        double beam = cell/4. * std::sqrt(2.);
+//        dim(0) = beam - dim(2) - dim(4);
+//        dim(1) = beam - dim(3) - dim(4);
+//        BOOST_ASSERT_MSG((dim.array() > 0.).all(),
+//                         "Dimensions must be positive");
+//        BOOST_ASSERT_MSG(dim(2) > dim(4),
+//                         "Major axis smaller than wall thickness");
+//        div.resize(5);
+//        argss >> div(0) >> div(2) >> div(3) >> div(4);
+//        div(1) = div(0);
+//        deltaT = 2e6 * beam;
+//        
+//        dom = new OctetDomain(dim, div, deltaT);
+//    }
     else
     {
         delete mat;
@@ -350,16 +388,24 @@ int main(int argc, const char * argv[]) {
     
     if (probStr == "check")
     {
-        checkDomain(mat, dom);
+        Eigen::Matrix3d rot;
+        argss >> rot(0l, 0l) >> rot(0l, 1l) >> rot(0l, 2l);
+        argss >> rot(1l, 0l) >> rot(1l, 1l) >> rot(1l, 2l);
+        argss >> rot(2l, 0l) >> rot(2l, 1l) >> rot(2l, 2l);
+        
+        checkDomain(mat, dom, rot, clk);
     }
     else if (probStr == "traj")
     {
+        Vector3d pos, dir;
+        argss >> pos(0) >> pos(1) >> pos(2);
+        argss >> dir(0) >> dir(1) >> dir(2);
         argss >> maxscat >> maxloop;
         
-        TrajProblem prob(mat, dom, maxscat, maxloop);
+        TrajProblem prob(mat, dom, pos, dir, maxscat, maxloop);
         std::cout << prob << std::endl << std::endl;
         
-        solveTraj(prob);
+        solveTraj(prob, clk);
     }
     else if (probStr == "temp")
     {
@@ -369,7 +415,7 @@ int main(int argc, const char * argv[]) {
         std::cout << prob << std::endl << std::endl;
         
         if (nsim == 1l) solveField(prob, clk);
-        else calcStats( solveField(prob, clk, nsim) );
+        else calcStats( solveField(prob, nsim, clk) );
     }
     else if (probStr == "flux")
     {
@@ -380,7 +426,7 @@ int main(int argc, const char * argv[]) {
         std::cout << prob << std::endl << std::endl;
         
         if (nsim == 1l) solveField(prob, clk);
-        else calcStats( solveField(prob, clk, nsim) );
+        else calcStats( solveField(prob, nsim, clk) );
     }
     else if (probStr == "multi")
     {
@@ -390,7 +436,7 @@ int main(int argc, const char * argv[]) {
         std::cout << prob << std::endl << std::endl;
         
         if (nsim == 1l) solveField(prob, clk);
-        else calcStats( solveField(prob, clk, nsim) );
+        else calcStats( solveField(prob, nsim, clk) );
     }
     else if (probStr == "cumtemp")
     {
@@ -400,7 +446,7 @@ int main(int argc, const char * argv[]) {
         std::cout << prob << std::endl << std::endl;
         
         if (nsim == 1l) solveField(prob, clk);
-        else calcStats( solveField(prob, clk, nsim) );
+        else calcStats( solveField(prob, nsim, clk) );
     }
     else if (probStr == "cumflux")
     {
@@ -411,7 +457,7 @@ int main(int argc, const char * argv[]) {
         std::cout << prob << std::endl << std::endl;
         
         if (nsim == 1l) solveField(prob, clk);
-        else calcStats( solveField(prob, clk, nsim) );
+        else calcStats( solveField(prob, nsim, clk) );
     }
     else
     {

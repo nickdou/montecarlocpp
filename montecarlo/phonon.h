@@ -71,7 +71,7 @@ public:
 class TrkPhonon : public Phonon
 {
 public:
-    typedef Eigen::Array<double, 3, Eigen::Dynamic> Array3Xd;
+    typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Matrix3Xd;
     
 private:
     std::vector<Vector3d> traj_;
@@ -86,7 +86,7 @@ public:
     const Vector3d& pos() const;
     void pos(const Vector3d& newPos);
     
-    Array3Xd trajectory() const;
+    Matrix3Xd trajectory() const;
 };
 
 #endif

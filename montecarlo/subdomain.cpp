@@ -179,7 +179,10 @@ const Boundary* Subdomain::advect(Phonon& phn, double vel) const
     }
     phn.move(minDist, vel);
     
-    if (minDist < -eps_ || !isInside( phn.pos() ))
+    bool negDist = (minDist < -eps_);
+    bool outside = !isInside( phn.pos() );
+    
+    if (negDist || outside)
     {
         phn.kill();
         return 0;

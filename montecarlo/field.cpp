@@ -16,6 +16,8 @@
 #include <iostream>
 #include <cmath>
 
+using Eigen::Dynamic;
+
 template<typename T, int N>
 Field<T, N>::Field()
 : dom_(0)
@@ -60,7 +62,7 @@ void Field<T, N>::initDom()
 template<typename T, int N>
 void Field<T, N>::setRows(long rows)
 {
-    if (N == Eigen::Dynamic && rows > 1l && data_.rows() == 1l)
+    if (N == Dynamic && rows > 1l && data_.rows() == 1l)
     {
         data_.conservativeResize(rows, data_.cols());
         data_ = data_.row(0).replicate(rows, 1l);
@@ -260,7 +262,7 @@ typename Field<T, N>::ArrayNXT Field<T, N>::match(const Field<T, N>& fld)
 {
     ArrayNXT fldData = fld.data_;
     
-    if (N == Eigen::Dynamic)
+    if (N == Dynamic)
     {
         long fldRows = fldData.rows();
         long rows = data_.rows();
@@ -369,6 +371,21 @@ Field<T, N> operator/(const Field<T, N>& fld1, const Field<T, N>& fld2)
 }
 
 template<typename T, int N>
+typename Field<T, N>::VectorNT
+Field<T, N>::average(const Field<T, N>& weight) const
+{
+    Field<T, N> w(weight);
+    w.match(*this);
+    return ((*this) * w).data_.rowwise().sum() / w.data_.rowwise().sum();
+}
+
+template<typename T, int N>
+const typename Field<T, N>::ArrayNXT& Field<T, N>::data() const
+{
+    return data_;
+}
+
+template<typename T, int N>
 std::ostream& operator<<(std::ostream& os, const Field<T, N>& fld)
 {
     std::ios_base::fmtflags flags = os.flags();
@@ -380,40 +397,47 @@ std::ostream& operator<<(std::ostream& os, const Field<T, N>& fld)
     return os;
 }
 
-template class Field<double, Eigen::Dynamic>;
+template class Field<double, Dynamic>;
 template class Field<double, 1>;
 template class Field<double, 2>;
 template class Field<double, 3>;
 template class Field<double, 4>;
 
-template
-Field<double, Eigen::Dynamic>::Field(const Domain*,
-                                     const CellVolF<double, Eigen::Dynamic>&);
+template Field<double, Dynamic>::Field(const Domain*,
+                                       const CellVolF<double, Dynamic>&);
 template Field<double, 1>::Field(const Domain*, const CellVolF<double, 1>&);
 template Field<double, 2>::Field(const Domain*, const CellVolF<double, 2>&);
 template Field<double, 3>::Field(const Domain*, const CellVolF<double, 3>&);
 template Field<double, 4>::Field(const Domain*, const CellVolF<double, 4>&);
 
+template
+Field<double, Dynamic>::Field(const Domain*,
+                              const OctetDomain::AverageF<double, Dynamic>&);
+template Field<double, 1>::Field(const Domain*,
+                                 const OctetDomain::AverageF<double, 1>&);
+template Field<double, 2>::Field(const Domain*,
+                                 const OctetDomain::AverageF<double, 2>&);
+template Field<double, 3>::Field(const Domain*,
+                                 const OctetDomain::AverageF<double, 3>&);
+template Field<double, 4>::Field(const Domain*,
+                                 const OctetDomain::AverageF<double, 4>&);
+
 template Field<double, 1>& Field<double, 1>::transform(const TempAccumF& fun);
 template Field<double, 1>& Field<double, 1>::transform(const FluxAccumF& fun);
 template Field<double, 4>& Field<double, 4>::transform(const MultiAccumF& fun);
-template Field<double, Eigen::Dynamic>&
-Field<double, Eigen::Dynamic>::transform(const CumTempAccumF&);
-template Field<double, Eigen::Dynamic>&
-Field<double, Eigen::Dynamic>::transform(const CumFluxAccumF&);
+template Field<double, Dynamic>&
+Field<double, Dynamic>::transform(const CumTempAccumF&);
+template Field<double, Dynamic>&
+Field<double, Dynamic>::transform(const CumFluxAccumF&);
 
-template Field<double, Eigen::Dynamic>
-operator+(const Field<double, Eigen::Dynamic>&,
-          const Field<double, Eigen::Dynamic>&);
-template Field<double, Eigen::Dynamic>
-operator-(const Field<double, Eigen::Dynamic>&,
-          const Field<double, Eigen::Dynamic>&);
-template Field<double, Eigen::Dynamic>
-operator*(const Field<double, Eigen::Dynamic>&,
-          const Field<double, Eigen::Dynamic>&);
-template Field<double, Eigen::Dynamic>
-operator/(const Field<double, Eigen::Dynamic>&,
-          const Field<double, Eigen::Dynamic>&);
+template Field<double, Dynamic> operator+(const Field<double, Dynamic>&,
+                                          const Field<double, Dynamic>&);
+template Field<double, Dynamic> operator-(const Field<double, Dynamic>&,
+                                          const Field<double, Dynamic>&);
+template Field<double, Dynamic> operator*(const Field<double, Dynamic>&,
+                                          const Field<double, Dynamic>&);
+template Field<double, Dynamic> operator/(const Field<double, Dynamic>&,
+                                          const Field<double, Dynamic>&);
 
 template Field<double, 1> operator+(const Field<double, 1>&,
                                     const Field<double, 1>&);
@@ -452,7 +476,7 @@ template Field<double, 4> operator/(const Field<double, 4>&,
                                     const Field<double, 4>&);
 
 template std::ostream& operator<<(std::ostream& os,
-                                  const Field<double, Eigen::Dynamic>&);
+                                  const Field<double, Dynamic>&);
 template std::ostream& operator<<(std::ostream& os,
                                   const Field<double, 1>&);
 template std::ostream& operator<<(std::ostream& os,
@@ -503,7 +527,7 @@ std::ostream& operator<<(std::ostream& os, const Statistics<S>& stats)
     return os;
 }
 
-template class Statistics< Field<double, Eigen::Dynamic> >;
+template class Statistics< Field<double, Dynamic> >;
 template class Statistics< Field<double, 1> >;
 template class Statistics< Field<double, 2> >;
 template class Statistics< Field<double, 3> >;
@@ -511,7 +535,7 @@ template class Statistics< Field<double, 4> >;
 
 template std::ostream&
 operator<<(std::ostream& os,
-           const Statistics< Field<double, Eigen::Dynamic> >&);
+           const Statistics< Field<double, Dynamic> >&);
 template std::ostream&
 operator<<(std::ostream& os,
            const Statistics< Field<double, 1> >&);

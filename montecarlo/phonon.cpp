@@ -155,10 +155,10 @@ void TrkPhonon::pos(const Vector3d& newPos)
     traj_.push_back(newPos);
 }
 
-TrkPhonon::Array3Xd TrkPhonon::trajectory() const
+TrkPhonon::Matrix3Xd TrkPhonon::trajectory() const
 {
-    Array3Xd arr(3, traj_.size());
-    Array3Xd::Index i = 0;
+    Matrix3Xd arr(3, traj_.size());
+    Matrix3Xd::Index i = 0;
     for (std::vector<Vector3d>::const_iterator x = traj_.begin();
          x != traj_.end(); ++x)
     {

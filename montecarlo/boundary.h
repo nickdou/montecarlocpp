@@ -16,6 +16,7 @@
 #include <Eigen/Core>
 #include <boost/static_assert.hpp>
 #include <vector>
+#include <string>
 
 using Eigen::Vector3d;
 using Eigen::Matrix3d;
@@ -44,6 +45,7 @@ public:
     Boundary& operator=(const Boundary& bdry);
     virtual ~Boundary();
     
+    virtual std::string type() const = 0;
     virtual bool isInit() const;
     const Subdomain* sdom() const;
     void sdom(const Subdomain* s);
@@ -65,6 +67,7 @@ class Boundary::Shape
 {
 public:
     virtual ~Shape();
+    virtual std::string type() const = 0;
     virtual bool isInit() const = 0;
     virtual Vector3d normal() const = 0;
     virtual double area() const = 0;
@@ -80,6 +83,7 @@ public:
     Parallelogram();
     Parallelogram(const Vector3d& i, const Vector3d& j);
     
+    std::string type() const;
     bool isInit() const;
     Vector3d normal() const;
     double area() const;
@@ -95,6 +99,7 @@ public:
     Triangle();
     Triangle(const Vector3d& i, const Vector3d& j);
     
+    std::string type() const;
     bool isInit() const;
     Vector3d normal() const;
     double area() const;
@@ -115,6 +120,7 @@ public:
     Polygon();
     Polygon(const Eigen::Matrix<double, 3, N - 1>& v);
     
+    std::string type() const;
     bool isInit() const;
     Vector3d normal() const;
     double area() const;
@@ -135,6 +141,7 @@ public:
     SpecBoundary(const Vector3d& o, const Vector3d& n);
     SpecBoundary(const Vector3d& o, const Shape& s, const double T);
     
+    std::string type() const;
     const Boundary* scatter(Phonon& phn, Rng&) const;
 };
 
@@ -148,6 +155,7 @@ public:
     DiffBoundary(const Vector3d& o, const Vector3d& n);
     DiffBoundary(const Vector3d& o, const Shape& s, const double T);
     
+    std::string type() const;
     const Boundary* scatter(Phonon& phn, Rng& gen) const;
 };
 
@@ -163,6 +171,7 @@ public:
     InterBoundary(const InterBoundary& bdry);
     InterBoundary& operator=(const InterBoundary& bdry);
     
+    std::string type() const;
     bool isInit() const;
     const Boundary* scatter(Phonon&, Rng&) const;
     
@@ -230,6 +239,7 @@ public:
     IsotBoundary();
     IsotBoundary(const Vector3d& o, const S& s, const double T);
     
+    std::string type() const;
     const Boundary* scatter(Phonon& phn, Rng&) const;
 };
 
@@ -258,6 +268,7 @@ public:
     PeriBoundary(const PeriBoundary& bdry);
     PeriBoundary& operator=(const PeriBoundary& peri);
     
+    std::string type() const;
     bool isInit() const;
     
     const Boundary* scatter(Phonon& phn, Rng&) const;

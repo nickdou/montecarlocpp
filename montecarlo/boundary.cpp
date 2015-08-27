@@ -14,6 +14,8 @@
 #include <Eigen/Geometry>
 #include <Eigen/Core>
 #include <boost/assert.hpp>
+#include <sstream>
+#include <string>
 #include <cmath>
 
 
@@ -122,6 +124,11 @@ Parallelogram::Parallelogram(const Vector3d& i, const Vector3d& j)
 : i_(i), j_(j)
 {}
 
+std::string Parallelogram::type() const
+{
+    return std::string("P");
+}
+
 bool Parallelogram::isInit() const
 {
     return area() != 0.;
@@ -151,6 +158,11 @@ Triangle::Triangle()
 Triangle::Triangle(const Vector3d& i, const Vector3d& j)
 : i_(i), j_(j)
 {}
+
+std::string Triangle::type() const
+{
+    return std::string("T");
+}
 
 bool Triangle::isInit() const
 {
@@ -199,6 +211,12 @@ Polygon<N>::Polygon(const Eigen::Matrix<double, 3, N - 1>& v)
     double* beg = areas_.data();
     double* end = beg + N - 2;
     areaDist_ = DiscreteDist(beg, end);
+}
+
+template<int N>
+std::string Polygon<N>::type() const
+{
+    return (std::ostringstream() << N).str();
 }
 
 template<int N>
@@ -254,6 +272,11 @@ SpecBoundary::SpecBoundary(const Vector3d& o, const Shape& s, const double T)
     BOOST_ASSERT_MSG(T == 0., "Cannot specify temperature");
 }
 
+std::string SpecBoundary::type() const
+{
+    return std::string("Spec");
+}
+
 const Boundary* SpecBoundary::scatter(Phonon& phn, Rng&) const
 {
     phn.dir(refl_.selfadjointView<Eigen::Upper>() * phn.dir(), false);
@@ -272,6 +295,11 @@ DiffBoundary::DiffBoundary(const Vector3d& o, const Shape& s, const double T)
 : Boundary(o, s), rot_( rotMatrix(normal()) )
 {
     BOOST_ASSERT_MSG(T == 0., "Cannot specify temperature");
+}
+
+std::string DiffBoundary::type() const
+{
+    return std::string("Diff");
 }
 
 const Boundary* DiffBoundary::scatter(Phonon& phn, Rng& gen) const
@@ -308,6 +336,11 @@ InterBoundary& InterBoundary::operator=(const InterBoundary& bdry)
 bool InterBoundary::isInit() const
 {
     return Boundary::isInit() && !pairs_.empty();
+}
+
+std::string InterBoundary::type() const
+{
+    return std::string("Inter");
 }
 
 const Boundary* InterBoundary::scatter(Phonon& phn, Rng&) const
@@ -405,15 +438,22 @@ IsotBoundary<S>::IsotBoundary(const Vector3d& o, const S& s, const double T)
 {}
 
 template<typename S>
+const Boundary::Shape& IsotBoundary<S>::shape() const
+{
+    return shape_;
+}
+
+template<typename S>
+std::string IsotBoundary<S>::type() const
+{
+    return std::string("Isot") + shape().type();
+}
+
+template<typename S>
 const Boundary* IsotBoundary<S>::scatter(Phonon& phn, Rng&) const
 {
     phn.kill();
     return this;
-}
-
-template<typename S>
-const Boundary::Shape& IsotBoundary<S>::shape() const {
-    return shape_;
 }
 
 template class IsotBoundary< Parallelogram >;
@@ -459,9 +499,22 @@ bool PeriBoundary<S>::isInit() const
 }
 
 template<typename S>
+const Boundary::Shape& PeriBoundary<S>::shape() const
+{
+    return shape_;
+}
+
+template<typename S>
+std::string PeriBoundary<S>::type() const
+{
+    return std::string("Peri") + shape().type();
+}
+
+template<typename S>
 const Boundary* PeriBoundary<S>::scatter(Phonon& phn, Rng&) const
 {
     phn.pos(rot_ * phn.pos() + transl_);
+    phn.dir(rot_ * phn.dir(), false); // CHECK THIS!!
     return pair_;
 }
 
@@ -471,6 +524,8 @@ void makePair(PeriBoundary<S>& bdry1, PeriBoundary<S>& bdry2,
 {
     BOOST_ASSERT_MSG(bdry1.pair_ == 0 && bdry2.pair_ == 0,
                      "Boundary already paired");
+    BOOST_ASSERT_MSG(Matrix3d::Identity().isApprox(rot * rot.transpose()),
+                     "Rotation matrix must be orthogonal");
     BOOST_ASSERT_MSG((rot * bdry1.normal()).isApprox( -bdry2.normal() ),
                      "Rotation matrix incorrect");
     Vector3d transform = rot * bdry1.normal() * (-bdry1.offset()) + transl;
@@ -485,15 +540,10 @@ void makePair(PeriBoundary<S>& bdry1, PeriBoundary<S>& bdry2,
     bdry1.rot_ = rot;
     bdry2.rot_ = rot.transpose();
     bdry1.transl_ = transl;
-    bdry2.transl_ = -transl;
+    bdry2.transl_ = -rot.transpose() * transl;
     
     bdry1.pair_ = &bdry2;
     bdry2.pair_ = &bdry1;
-}
-
-template<typename S>
-const Boundary::Shape& PeriBoundary<S>::shape() const {
-    return shape_;
 }
 
 template class PeriBoundary< Parallelogram >;

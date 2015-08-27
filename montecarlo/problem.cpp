@@ -56,7 +56,7 @@ std::string Clock::timestamp()
 }
 
 Progress::Progress()
-: tot_(0l), count_(0l)
+: tot_(0l), count_(0l), esc_(0l)
 {}
 
 Progress::Progress(long tot, long div)
@@ -111,11 +111,6 @@ long Progress::incrEsc()
         esc_++;
     }
     return esc_;
-}
-
-void Progress::count(long n)
-{
-    while (n > count_) incrCount();
 }
 
 template<typename Derived>
@@ -232,7 +227,7 @@ std::string TrajProblem::info() const
 
 Progress TrajProblem::initProgress() const
 {
-    return Progress(maxscat_, std::min(10l, maxscat_));
+    return Progress();
 }
 
 template<typename C, typename E>
@@ -242,7 +237,7 @@ long find(const C& cont, E elem) {
     return (index == cont.size() ? -1l : index);
 }
 
-TrkPhonon::Array3Xd TrajProblem::solve(Rng& gen, Progress* prog) const
+TrkPhonon::Matrix3Xd TrajProblem::solve(Rng& gen, Progress* prog) const
 {
     TrkPhonon phn;
     const Subdomain* sdom = 0;
@@ -276,22 +271,22 @@ TrkPhonon::Array3Xd TrajProblem::solve(Rng& gen, Progress* prog) const
     
     for (long i = 0; i < maxloop; i++)
     {
-        std::cout << std::setw(2) << find(dom()->sdomPtrs(), sdom);
-        std::cout << ": ";
-        std::cout << std::setw(2) << find(sdom->bdryPtrs(), bdry);
-        std::cout << " --> ";
+        std::cout << std::setw(2) << find(dom()->sdomPtrs(), sdom) << ": ";
+        std::cout << std::setw(2) << find(sdom->bdryPtrs(), bdry)  << " ";
+        std::cout << std::setw(5) << (bdry ? bdry->type() : "Null") << " -> ";
         
         double vel = mat()->vel(phn);
         bdry = sdom->advect(phn, vel);
         
-        std::cout << std::setw(2) << find(sdom->bdryPtrs(), bdry);
-        std::cout << std::endl;
-        
         if (!phn.alive())
         {
-            if (prog) prog->incrEsc();
+            prog->incrEsc();
             break;
         }
+        
+        std::cout << std::setw(2) << find(sdom->bdryPtrs(), bdry)  << " ";
+        std::cout << std::setw(5) << (bdry ? bdry->type() : "Null");
+        std::cout << std::endl;
         
         if (bdry)
         {
@@ -299,19 +294,20 @@ TrkPhonon::Array3Xd TrajProblem::solve(Rng& gen, Progress* prog) const
             
             if (!bdry)
             {
-                if (prog) prog->incrEsc(); // Inter
+                prog->incrEsc(); // Inter
                 break;
             }
+            
+            sdom = bdry->sdom();
         }
         else
         {
             mat()->scatter(phn, gen);
         }
-        
         if (!phn.alive() || phn.nscat() >= maxscat_) break;
     }
     
-    if (prog && prog->esc() > 0l) std::cout << "Phonon escaped" << std::endl;
+    if (prog->esc() > 0l) std::cout << "Escaped" << std::endl;
     
     return phn.trajectory();
 }
@@ -321,7 +317,7 @@ typename CellVolF<T, N>::VectorNT
 CellVolF<T, N>::operator()(const Subdomain* sdom, const Vector3l& index) const
 {
     double scalar = sdom->cellVol(index);
-    return Eigen::Matrix<T, N, 1>::Constant(std::max(1, N), scalar);
+    return VectorNT::Constant(std::max(1, N), scalar);
 }
 
 template struct CellVolF<double, Eigen::Dynamic>;
@@ -430,7 +426,7 @@ FieldProblem<Derived>::solve(Rng& gen, Progress* prog) const
             
             if (!phn.alive())
             {
-                if (prog) prog->incrEsc();
+                prog->incrEsc();
                 break;
             }
             
@@ -444,9 +440,11 @@ FieldProblem<Derived>::solve(Rng& gen, Progress* prog) const
                 
                 if (!bdry)
                 {
-                    if (prog) prog->incrEsc(); // Inter
+                    prog->incrEsc(); // Inter
                     break;
                 }
+                
+                sdom = bdry->sdom();
             }
             else
             {
@@ -587,9 +585,8 @@ MultiProblem::MultiProblem(const Material* mat, const Domain* dom,
                            long nemit, long maxscat, long maxloop)
 : Base(mat, dom, nemit, maxscat, maxloop), rot_(rot)
 {
-    Matrix3d inv = rot.transpose();
-    BOOST_ASSERT_MSG(Matrix3d::Identity().isApprox(inv * rot),
-                     "Direction matrix must be unitary");
+    BOOST_ASSERT_MSG(Matrix3d::Identity().isApprox(rot * rot.transpose()),
+                     "Direction matrix must be orthogonal");
 }
 
 MultiProblem::MultiProblem(const Material* mat, const Domain* dom,
