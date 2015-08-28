@@ -16,6 +16,9 @@
 #include <iostream>
 #include <string>
 
+using Eigen::ArrayXd;
+using Eigen::ArrayXXd;
+
 class Material
 {
 private:
@@ -27,19 +30,22 @@ private:
         
     public:
         Dist();
-        Dist(const Eigen::ArrayXXd& pdf);
+        Dist(const ArrayXXd& pdf);
         
         Phonon::Prop drawProp(Rng& gen) const;
     };
     
+    
     static const int nscat_ = 2;
     long np_, nw_;
     double T_, k_;
-    Eigen::ArrayXd omega_;
-    Eigen::ArrayXXd tau_, vel_;
+    ArrayXd omega_;
+    ArrayXXd tau_, vel_;
     Dist energyDist_, fluxDist_, scatDist_;
     double energySum_, fluxSum_, scatSum_;
-    std::string info_;
+    std::string disp_, relax_;
+    
+    std::string info() const;
     
 public:
     Material();

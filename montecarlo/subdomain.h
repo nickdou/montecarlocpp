@@ -27,8 +27,10 @@ namespace result_of = boost::fusion::result_of;
 
 using Eigen::Vector3d;
 using Eigen::Matrix3d;
+using Eigen::VectorXd;
 
 typedef Eigen::Matrix<long, 3, 1> Vector3l;
+typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Matrix3Xd;
 
 class Subdomain
 {
@@ -142,8 +144,7 @@ public:
     
     Parallelepiped(const Vector3d& o, const Matrix3d& mat, const Vector3l& div,
                    const Vector3d& gradT = Vector3d::Zero(),
-                   const Eigen::Matrix<double, 6, 1>& T =
-                   Eigen::Matrix<double, 6, 1>::Zero())
+                   const VectorXd& T = VectorXd::Zero(6))
     : EmitSubdomain(mat.determinant(), o, mat, div, gradT),
     bdryCont_(Bac(o,              Par(mat.col(1), mat.col(2)), T(0)),
               Lef(o,              Par(mat.col(2), mat.col(0)), T(1)),
@@ -152,6 +153,7 @@ public:
               Rig(o + mat.col(1), Par(mat.col(0), mat.col(2)), T(4)),
               Top(o + mat.col(2), Par(mat.col(1), mat.col(0)), T(5)))
     {
+        BOOST_ASSERT_MSG(T.size() == 6, "Incorrect number of temperatures");
         init();
     }
     
@@ -221,8 +223,7 @@ public:
     
     TriangularPrism(const Vector3d& o, const Matrix3d& mat, const Vector3l& div,
                     const Vector3d& gradT = Vector3d::Zero(),
-                    const Eigen::Matrix<double, 5, 1>& T =
-                    Eigen::Matrix<double, 5, 1>::Zero())
+                    const VectorXd& T = VectorXd::Zero(5))
     : EmitSubdomain(mat.determinant() / 2., o, mat, div, gradT),
     bdryCont_(Bac(o,              Par(mat.col(1),  mat.col(2)), T(0)),
               Lef(o,              Par(mat.col(2),  mat.col(0)), T(1)),
@@ -231,6 +232,7 @@ public:
                                       mat.col(1) - mat.col(0)), T(3)),
               Top(o + mat.col(2), Tri(mat.col(1),  mat.col(0)), T(4)))
     {
+        BOOST_ASSERT_MSG(T.size() == 5, "Incorrect number of temperatures");
         init();
     }
     
@@ -298,8 +300,7 @@ public:
     
     Tetrahedron(const Vector3d& o, const Matrix3d& mat, const Vector3l& div,
                 const Vector3d& gradT = Vector3d::Zero(),
-                const Eigen::Matrix<double, 4, 1>& T =
-                Eigen::Matrix<double, 4, 1>::Zero())
+                const VectorXd& T = VectorXd::Zero(4))
     : EmitSubdomain(mat.determinant() / 6., o, mat, div, gradT),
     bdryCont_(Bac(o,              Tri(mat.col(1),  mat.col(2)), T(0)),
               Lef(o,              Tri(mat.col(2),  mat.col(0)), T(1)),
@@ -307,6 +308,7 @@ public:
               Dia(o + mat.col(0), Tri(mat.col(2) - mat.col(0),
                                       mat.col(1) - mat.col(0)), T(3)))
     {
+        BOOST_ASSERT_MSG(T.size() == 4, "Incorrect number of temperatures");
         init();
     }
     
@@ -351,10 +353,8 @@ private:
 
 namespace PrismImpl
 {
-    typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Matrix3Xd;
-    
     Matrix3d matBase(const Matrix3Xd& mat);
-    Eigen::VectorXd volume(const Matrix3Xd& mat);
+    VectorXd volume(const Matrix3Xd& mat);
     
     double cellVol(const Vector3l& index, const Vector3l& shape, double vol);
     Vector3d drawPos(const Vector3d& o, const Matrix3Xd& mat,
@@ -374,8 +374,6 @@ public:
     typedef typename result_of::as_vector<BotTopSid>::type BdryCont;
     
 private:
-    typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Matrix3Xd;
-    
     BdryCont bdryCont_;
     Matrix3Xd mat_;
     DiscreteDist volDist_;
@@ -387,15 +385,16 @@ public:
     
     Prism(const Vector3d& o, const Matrix3Xd& mat, long div,
           const Vector3d& gradT = Vector3d::Zero(),
-          const Eigen::VectorXd& T = Eigen::VectorXd::Zero(N + 2))
+          const VectorXd& T = VectorXd::Zero(N + 2))
     : EmitSubdomain(PrismImpl::volume(mat).sum(), o,
                     PrismImpl::matBase(mat),
-                    Vector3l::Constant(div < 0l ? -1l : 0l), gradT),
+                    Vector3l::Constant(div < 0 ? -1 : 0), gradT),
     mat_(mat)
     {
         BOOST_ASSERT_MSG(mat.cols() == N, "Incorrect number of matrix columns");
+        BOOST_ASSERT_MSG(T.size() == N + 2, "Incorrect number of temperatures");
         
-        Eigen::VectorXd vol = PrismImpl::volume(mat);
+        VectorXd vol = PrismImpl::volume(mat);
         volDist_ = DiscreteDist(vol.data(), vol.data() + N - 2);
         
         Matrix3Xd matBot = mat.rightCols(N - 1);
@@ -446,11 +445,10 @@ private:
     private:
         Vector3d o_;
         Matrix3Xd mat_;
-        Eigen::VectorXd T_;
+        VectorXd T_;
         
     public:
-        InitSidesF(const Vector3d& o, const Matrix3Xd& mat,
-                   const Eigen::VectorXd& T)
+        InitSidesF(const Vector3d& o, const Matrix3Xd& mat, const VectorXd& T)
         : o_(o), mat_(mat), T_(T)
         {}
         
@@ -489,16 +487,14 @@ private:
     
     Vector3d drawPos(Rng& gen) const
     {
-        return PrismImpl::drawPos(origin(), matrix(), volDist_, gen);
+        return PrismImpl::drawPos(origin(), mat_, volDist_, gen);
     }
 };
 
 namespace PyramidImpl
 {
-    typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Matrix3Xd;
-    
     Matrix3d matBase(const Matrix3Xd& mat);
-    Eigen::VectorXd volume(const Matrix3Xd& mat);
+    VectorXd volume(const Matrix3Xd& mat);
     
     double cellVol(const Vector3l& index, const Vector3l& shape, double vol);
     Vector3d drawPos(const Vector3d& o, const Matrix3Xd& mat,
@@ -517,8 +513,6 @@ public:
     typedef typename result_of::as_vector<BotSid>::type BdryCont;
     
 private:
-    typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Matrix3Xd;
-    
     BdryCont bdryCont_;
     Matrix3Xd mat_;
     DiscreteDist volDist_;
@@ -530,15 +524,16 @@ public:
     
     Pyramid(const Vector3d& o, const Matrix3Xd& mat, long div,
             const Vector3d& gradT = Vector3d::Zero(),
-            const Eigen::VectorXd& T = Eigen::VectorXd::Zero(N + 1))
+            const VectorXd& T = VectorXd::Zero(N + 1))
     : EmitSubdomain(PyramidImpl::volume(mat).sum(), o,
                     PyramidImpl::matBase(mat),
-                    Vector3l::Constant(div < 0l ? -1l : 0l), gradT),
+                    Vector3l::Constant(div < 0 ? -1 : 0), gradT),
     mat_(mat)
     {
         BOOST_ASSERT_MSG(mat.cols() == N, "Incorrect number of matrix columns");
+        BOOST_ASSERT_MSG(T.size() == N + 1, "Incorrect number of temperatures");
         
-        Eigen::VectorXd vol = PyramidImpl::volume(mat);
+        VectorXd vol = PyramidImpl::volume(mat);
         volDist_ = DiscreteDist(vol.data(), vol.data() + N - 2);
         
         Matrix3Xd matBot = mat.rightCols(N - 1);
@@ -587,11 +582,10 @@ private:
     private:
         Vector3d o_;
         Matrix3Xd mat_;
-        Eigen::VectorXd T_;
+        VectorXd T_;
         
     public:
-        InitSidesF(const Vector3d& o, const Matrix3Xd& mat,
-                   const Eigen::VectorXd& T)
+        InitSidesF(const Vector3d& o, const Matrix3Xd& mat, const VectorXd& T)
         : o_(o), mat_(mat), T_(T)
         {}
         
@@ -631,7 +625,7 @@ private:
     
     Vector3d drawPos(Rng& gen) const
     {
-        return PyramidImpl::drawPos(origin(), matrix(), volDist_, gen);
+        return PyramidImpl::drawPos(origin(), mat_, volDist_, gen);
     }
 };
 

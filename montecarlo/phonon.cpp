@@ -33,7 +33,7 @@ Phonon::Phonon()
 Phonon::Phonon(bool sign, const Prop& prop,
                const Vector3d& pos, const Vector3d& dir)
 : alive_(true), sign_(sign), prop_(prop), pos_(pos), dir_(dir.normalized()),
-line_(pos, dir.normalized()), time_(0.), scatNext_(0.), nscat_(0l)
+line_(pos, dir.normalized()), time_(0.), scatNext_(0.), nscat_(0)
 {}
 
 Phonon::~Phonon()
@@ -155,7 +155,7 @@ void TrkPhonon::pos(const Vector3d& newPos)
     traj_.push_back(newPos);
 }
 
-TrkPhonon::Matrix3Xd TrkPhonon::trajectory() const
+Matrix3Xd TrkPhonon::trajectory() const
 {
     Matrix3Xd arr(3, traj_.size());
     Matrix3Xd::Index i = 0;

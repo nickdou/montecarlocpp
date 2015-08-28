@@ -22,16 +22,21 @@ namespace fusion = boost::fusion;
 namespace result_of = boost::fusion::result_of;
 
 using Eigen::Vector3d;
+using Eigen::Vector4d;
 using Eigen::Matrix3d;
+using Eigen::VectorXd;
+using Eigen::ArrayXXd;
 
+typedef Eigen::Matrix<double, 5, 1> Vector5d;
 typedef Eigen::Matrix<long, 3, 1> Vector3l;
+typedef Eigen::Matrix<long, 4, 1> Vector4l;
+typedef Eigen::Matrix<long, 5, 1> Vector5l;
+typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Matrix3Xd;
+typedef Eigen::DiagonalMatrix<double, 3> Diagonal3d;
 
 class Domain
 {
 protected:
-    typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Matrix3Xd;
-    typedef Eigen::DiagonalMatrix<double, 3> Diagonal;
-    
     typedef SpecBoundary                  Spec;
     typedef DiffBoundary                  Diff;
     typedef InterBoundary                 Inter;
@@ -45,34 +50,27 @@ private:
     Subdomain::Pointers sdomPtrs_;
     Emitter::Pointers emitPtrs_;
     
-    Vector3d gradT_;
-    Matrix3Xd checkpoints_;
-    std::string info_;
-    
-    Domain(const Domain& dom);
-    Domain& operator=(const Domain& dom);
+    virtual std::string info() const = 0;
     
 public:
     Domain();
-    Domain(const Vector3d& gradT);
+    Domain(const Domain& dom);
+    Domain& operator=(const Domain& dom);
     virtual ~Domain();
     
-    virtual bool isInit() const;
-    virtual bool isInside(const Vector3d& pos) const;
+    bool isInit() const;
+    bool isInside(const Vector3d& pos) const;
     const Subdomain* locate(const Vector3d& pos) const;
     
     const Subdomain::Pointers& sdomPtrs() const;
     const Emitter::Pointers& emitPtrs() const;
     
-    Vector3d gradT() const;
-    Matrix3Xd checkpoints() const;
+    virtual Matrix3Xd checkpoints() const = 0;
+    virtual ArrayXXd average(const ArrayXXd& data) const;
     
     friend std::ostream& operator<<(std::ostream& os, const Domain& dom);
     
 protected:
-    void checkpoints(const Matrix3Xd& pts);
-    void info(const std::string& str);
-    
     void addSdom(const Subdomain* sdom);
     void addSdom(const EmitSubdomain* sdom);
     
@@ -87,8 +85,9 @@ private:
     
 public:
     AddSdomF(Domain* dom);
-    template<typename S>
-    void operator()(const S& sdom) const;
+    
+    void operator()(const Subdomain& bdry) const;
+    void operator()(const EmitSubdomain& bdry) const;
 };
 
 class BulkDomain : public Domain
@@ -98,10 +97,20 @@ public:
     
 private:
     Sdom sdom_;
+    Vector3d dim_;
+    Vector3l div_;
+    double dT_;
+    
+    std::string info() const;
+    void init();
     
 public:
     BulkDomain();
-    BulkDomain(const Vector3d& corner, const Vector3l& div, double deltaT);
+    BulkDomain(const Vector3d& dim, const Vector3l& div, double dT);
+    BulkDomain(const BulkDomain& dom);
+    BulkDomain& operator=(const BulkDomain& dom);
+    
+    Matrix3Xd checkpoints() const;
 };
 
 class FilmDomain : public Domain
@@ -111,28 +120,43 @@ public:
     
 private:
     Sdom sdom_;
+    Vector3d dim_;
+    Vector3l div_;
+    double dT_;
     
+    std::string info() const;
     void init();
     
 public:
     FilmDomain();
-    FilmDomain(const Vector3d& corner, const Vector3l& div, double deltaT);
+    FilmDomain(const Vector3d& dim, const Vector3l& div, double dT);
+    FilmDomain(const FilmDomain& dom);
+    FilmDomain& operator=(const FilmDomain& dom);
+    
+    Matrix3Xd checkpoints() const;
 };
 
 class HexDomain : public Domain
 {
 public:
     typedef Prism< PeriBoundary< Polygon<6> >, PeriBoundary< Polygon<6> >,
-    fusion::vector6<Spec, Spec, Spec, Spec, Spec, Spec> > Sdom;
+        fusion::vector6<Spec, Spec, Spec, Spec, Spec, Spec> > Sdom;
     
 private:
     Sdom sdom_;
+    Vector4d dim_;
+    double dT_;
     
+    std::string info() const;
     void init();
     
 public:
     HexDomain();
-    HexDomain(const Eigen::Matrix<double, 4, 1>& dim, double deltaT);
+    HexDomain(const Vector4d& dim, double dT);
+    HexDomain(const HexDomain& dom);
+    HexDomain& operator=(const HexDomain& dom);
+    
+    Matrix3Xd checkpoints() const;
 };
 
 class PyrDomain : public Domain
@@ -142,10 +166,19 @@ public:
     
 private:
     Sdom sdom_;
+    Vector3d dim_;
+    double dT_;
+    
+    std::string info() const;
+    void init();
     
 public:
     PyrDomain();
-    PyrDomain(const Eigen::Matrix<double, 3, 1>& dim, double deltaT);
+    PyrDomain(const Vector3d& dim, double dT);
+    PyrDomain(const PyrDomain& dom);
+    PyrDomain& operator=(const PyrDomain& dom);
+    
+    Matrix3Xd checkpoints() const;
 };
 
 class JctDomain : public Domain
@@ -162,18 +195,28 @@ private:
     {};
     
     SdomCont sdomCont_;
+    Vector4d dim_;
+    Vector4l div_;
+    double dT_;
+    
+    std::string info() const;
+    void init();
     
 public:
     JctDomain();
-    JctDomain(const Eigen::Matrix<double, 4, 1>& dim,
-              const Eigen::Matrix<long, 4, 1>& div,
-              double deltaT);
+    JctDomain(const Vector4d& dim,
+              const Vector4l& div,
+              double dT);
+    JctDomain(const JctDomain& dom);
+    JctDomain& operator=(const JctDomain& dom);
     
     template<int I>
     typename result_of::at_c<SdomCont, I>::type sdom()
     {
         return fusion::at_c<I>(sdomCont_);
     }
+    
+    Matrix3Xd checkpoints() const;
 };
 
 class TeeDomain : public Domain
@@ -191,18 +234,28 @@ private:
     {};
     
     SdomCont sdomCont_;
+    Vector5d dim_;
+    Vector5l div_;
+    double dT_;
+    
+    std::string info() const;
+    void init();
     
 public:
     TeeDomain();
-    TeeDomain(const Eigen::Matrix<double, 5, 1>& dim,
-              const Eigen::Matrix<long, 5, 1>& div,
-              double deltaT);
+    TeeDomain(const Vector5d& dim,
+              const Vector5l& div,
+              double dT);
+    TeeDomain(const TeeDomain& dom);
+    TeeDomain& operator=(const TeeDomain& dom);
     
     template<int I>
     typename result_of::at_c<SdomCont, I>::type sdom()
     {
         return fusion::at_c<I>(sdomCont_);
     }
+    
+    Matrix3Xd checkpoints() const;
 };
 
 class TubeDomain : public Domain
@@ -219,18 +272,28 @@ private:
     {};
     
     SdomCont sdomCont_;
+    Vector4d dim_;
+    Vector4l div_;
+    double dT_;
+    
+    std::string info() const;
+    void init();
     
 public:
     TubeDomain();
-    TubeDomain(const Eigen::Matrix<double, 4, 1>& dim,
-               const Eigen::Matrix<long, 4, 1>& div,
-               double deltaT);
+    TubeDomain(const Vector4d& dim,
+               const Vector4l& div,
+               double dT);
+    TubeDomain(const TubeDomain& dom);
+    TubeDomain& operator=(const TubeDomain& dom);
     
     template<int I>
     typename result_of::at_c<SdomCont, I>::type sdom()
     {
         return fusion::at_c<I>(sdomCont_);
     }
+    
+    Matrix3Xd checkpoints() const;
 };
 
 class OctetDomain : public Domain
@@ -291,13 +354,24 @@ private:
     struct Sdom : result_of::value_at_c<SdomCont, I>
     {};
     
+    class WeightF;
+    
     SdomCont sdomCont_;
+    Vector4d dim_;
+    Vector4l div_;
+    double dT_;
+    Matrix3Xd pts_;
+    
+    std::string info() const;
+    void init();
     
 public:
     OctetDomain();
-    OctetDomain(const Eigen::Matrix<double, 4, 1>& dim,
-                const Eigen::Matrix<long, 4, 1>& div,
-                double deltaT);
+    OctetDomain(const Vector4d& dim,
+                const Vector4l& div,
+                double dT);
+    OctetDomain(const OctetDomain& dom);
+    OctetDomain& operator=(const OctetDomain& dom);
     
     template<int I>
     typename result_of::at_c<SdomCont, I>::type sdom()
@@ -305,29 +379,19 @@ public:
         return fusion::at_c<I>(sdomCont_);
     }
     
-    template<typename T, int N>
-    class AverageF;
+    Matrix3Xd checkpoints() const;
+    ArrayXXd average(const ArrayXXd& data) const;
 };
 
-template<typename T, int N>
-class Field;
-
-template<typename T, int N>
-class OctetDomain::AverageF
+class OctetDomain::WeightF
 {
-public:
-    typedef Eigen::Matrix<double, N, 1> VectorNT;
-    typedef Eigen::Matrix<long, 3, 1> Vector3l;
-    
 private:
-    const OctetDomain* dom_;
     Subdomain::Pointers sdomAvg_;
     
 public:
-    AverageF(const OctetDomain& dom);
+    WeightF(const OctetDomain& dom);
     
-    VectorNT operator()(const Subdomain* sdom, const Vector3l& index) const;
-    VectorNT operator()(const Field<T, N>& fld) const;
+    VectorXd operator()(const Subdomain* sdom, const Vector3l& index) const;
 };
 
 
@@ -841,7 +905,7 @@ public:
 //    OctetDomain();
 //    OctetDomain(const Eigen::Matrix<double, 5, 1>& dim,
 //                const Eigen::Matrix<long, 5, 1>& div,
-//                double deltaT);
+//                double dT);
 //    
 //    template<int I>
 //    typename result_of::at_c<SdomCont, I>::type sdom()

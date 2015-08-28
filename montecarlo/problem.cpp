@@ -24,6 +24,10 @@
 #include <ctime>
 #include <cmath>
 
+//----------------------------------------
+//  Helper classes
+//----------------------------------------
+
 Clock::Clock()
 {
     std::time(&start_);
@@ -56,11 +60,11 @@ std::string Clock::timestamp()
 }
 
 Progress::Progress()
-: tot_(0l), count_(0l), esc_(0l)
+: tot_(0), count_(0), esc_(0)
 {}
 
 Progress::Progress(long tot, long div)
-: tot_(tot), count_(0l), div_(div), next_(0l), esc_(0l)
+: tot_(tot), count_(0), div_(div), next_(0), esc_(0)
 {
     BOOST_ASSERT_MSG(tot_ >= div_, "Too many divisions");
     for (long i = 1; i <= div_; ++i)
@@ -113,35 +117,33 @@ long Progress::incrEsc()
     return esc_;
 }
 
-template<typename Derived>
-Problem<Derived>::Problem()
+//----------------------------------------
+//  Problem
+//----------------------------------------
+
+Problem::Problem()
 {}
 
-template<typename Derived>
-Problem<Derived>::Problem(const Material* mat, const Domain* dom)
+Problem::Problem(const Material* mat, const Domain* dom)
 : mat_(mat), dom_(dom)
 {
     BOOST_ASSERT_MSG(dom_->isInit(), "Domain setup not complete");
 }
 
-template<typename Derived>
-Problem<Derived>::~Problem()
+Problem::~Problem()
 {}
 
-template<typename Derived>
-const Material* Problem<Derived>::mat() const
+const Material* Problem::mat() const
 {
     return mat_;
 }
 
-template<typename Derived>
-const Domain* Problem<Derived>::dom() const
+const Domain* Problem::dom() const
 {
     return dom_;
 }
 
-template<typename Derived>
-std::string Problem<Derived>::info() const
+std::string Problem::info() const
 {
     std::ostringstream ss;
     ss << "  mat:     " << mat_ << std::endl;
@@ -149,73 +151,57 @@ std::string Problem<Derived>::info() const
     return ss.str();
 }
 
-template<typename Derived>
-std::ostream& operator<<(std::ostream& os, const Problem<Derived>& prob)
+std::ostream& operator<<(std::ostream& os, const Problem& prob)
 {
     return os << prob.info();
 }
 
-template class Problem< TrajProblem >;
-template class Problem< TempProblem >;
-template class Problem< FluxProblem >;
-template class Problem< MultiProblem >;
-template class Problem< CumTempProblem >;
-template class Problem< CumFluxProblem >;
-
-template std::ostream& operator<<(std::ostream& os,
-                                  const Problem< TrajProblem >& prob);
-template std::ostream& operator<<(std::ostream& os,
-                                  const Problem< TempProblem >& prob);
-template std::ostream& operator<<(std::ostream& os,
-                                  const Problem< FluxProblem >& prob);
-template std::ostream& operator<<(std::ostream& os,
-                                  const Problem< MultiProblem >& prob);
-template std::ostream& operator<<(std::ostream& os,
-                                  const Problem< CumTempProblem >& prob);
-template std::ostream& operator<<(std::ostream& os,
-                                  const Problem< CumFluxProblem >& prob);
+//----------------------------------------
+//  Trajectory problem
+//----------------------------------------
 
 TrajProblem::TrajProblem()
-: Base()
+: Problem()
 {}
 
 TrajProblem::TrajProblem(const Material* mat, const Domain* dom,
             const Phonon::Prop& prop,
-            const Eigen::Vector3d& pos, const Eigen::Vector3d& dir,
+            const Vector3d& pos, const Vector3d& dir,
             long maxscat, long maxloop)
-: Base(mat, dom), maxscat_(maxscat), maxloop_(maxloop),
-prop_(prop), pos_(pos), dir_(dir)
+: Problem(mat, dom), maxscat_(maxscat), maxloop_(maxloop), prop_(prop),
+pos_(pos), dir_(dir)
 {}
 
 TrajProblem::TrajProblem(const Material* mat, const Domain* dom,
-            const Phonon::Prop& prop, const Eigen::Vector3d& pos,
+            const Phonon::Prop& prop, const Vector3d& pos,
             long maxscat, long maxloop)
-: Base(mat, dom), maxscat_(maxscat), maxloop_(maxloop), prop_(prop), pos_(pos)
+: Problem(mat, dom), maxscat_(maxscat), maxloop_(maxloop), prop_(prop),
+pos_(pos)
 {}
 
 TrajProblem::TrajProblem(const Material* mat, const Domain* dom,
-            const Eigen::Vector3d& pos, const Eigen::Vector3d& dir,
+            const Vector3d& pos, const Vector3d& dir,
             long maxscat, long maxloop)
-: Base(mat, dom), maxscat_(maxscat), maxloop_(maxloop), pos_(pos), dir_(dir)
+: Problem(mat, dom), maxscat_(maxscat), maxloop_(maxloop), pos_(pos), dir_(dir)
 {}
 
 TrajProblem::TrajProblem(const Material* mat, const Domain* dom,
-            const Eigen::Vector3d& pos,
+            const Vector3d& pos,
             long maxscat, long maxloop)
-: Base(mat, dom), maxscat_(maxscat), maxloop_(maxloop), pos_(pos)
+: Problem(mat, dom), maxscat_(maxscat), maxloop_(maxloop), pos_(pos)
 {}
 
 TrajProblem::TrajProblem(const Material* mat, const Domain* dom,
             long maxscat, long maxloop)
-: Base(mat, dom), maxscat_(maxscat), maxloop_(maxloop)
+: Problem(mat, dom), maxscat_(maxscat), maxloop_(maxloop)
 {}
 
 std::string TrajProblem::info() const
 {
-    static const Eigen::IOFormat fmt(0, 0, " ", ";", "", "", "[", "]");
+    Eigen::IOFormat fmt(0, 0, " ", ";", "", "", "[", "]");
     std::ostringstream ss;
-    ss << "TrajProblem " << this << std::endl;
-    ss << Base::info() << std::endl;
+    ss << "TrajProblem " << static_cast<const Problem*>(this) << std::endl;
+    ss << Problem::info() << std::endl;
     if (prop_) ss << "  prop:    " << prop_->w() << " " <<
                                       prop_->p() << std::endl;
     if (pos_) ss << "  pos:     " << pos_->transpose().format(fmt) << std::endl;
@@ -230,24 +216,24 @@ Progress TrajProblem::initProgress() const
     return Progress();
 }
 
-template<typename C, typename E>
-long find(const C& cont, E elem) {
-    //    unsigned long index;
+template<typename T>
+long find(const std::vector<T>& cont, const T& elem)
+{
     long index = std::find(cont.begin(), cont.end(), elem) - cont.begin();
-    return (index == cont.size() ? -1l : index);
+    return (index == cont.size() ? -1 : index);
 }
 
-TrkPhonon::Matrix3Xd TrajProblem::solve(Rng& gen, Progress* prog) const
+ArrayXXd TrajProblem::solve(Rng& gen, Progress* prog) const
 {
-    TrkPhonon phn;
     const Subdomain* sdom = 0;
     const Boundary* bdry = 0;
     
+    TrkPhonon phn;
     Phonon::Prop prop = (prop_ ? *prop_ : mat()->drawScatProp(gen));
     if (pos_)
     {
-        Eigen::Vector3d pos = *pos_;
-        Eigen::Vector3d dir = (dir_ ? *dir_ : drawIso(gen));
+        Vector3d pos = *pos_;
+        Vector3d dir = (dir_ ? *dir_ : drawIso(gen));
         
         phn = TrkPhonon(true, prop, pos, dir);
         
@@ -307,73 +293,61 @@ TrkPhonon::Matrix3Xd TrajProblem::solve(Rng& gen, Progress* prog) const
         if (!phn.alive() || phn.nscat() >= maxscat_) break;
     }
     
-    if (prog->esc() > 0l) std::cout << "Escaped" << std::endl;
+    if (prog->esc() > 0) std::cout << "Escaped" << std::endl;
     
     return phn.trajectory();
 }
 
-template<typename T, int N>
-typename CellVolF<T, N>::VectorNT
-CellVolF<T, N>::operator()(const Subdomain* sdom, const Vector3l& index) const
+
+VectorXd CellVolF::operator()(const Subdomain* sdom,
+                                     const Vector3l& index) const
 {
-    double scalar = sdom->cellVol(index);
-    return VectorNT::Constant(std::max(1, N), scalar);
+    return VectorXd::Constant(1, sdom->cellVol(index));
 }
 
-template struct CellVolF<double, Eigen::Dynamic>;
-template struct CellVolF<double, 1>;
-template struct CellVolF<double, 2>;
-template struct CellVolF<double, 3>;
-template struct CellVolF<double, 4>;
+//----------------------------------------
+//  Field problem
+//----------------------------------------
 
-template<typename Derived>
-FieldProblem<Derived>::FieldProblem()
+FieldProblem::FieldProblem()
 {}
 
-template<typename Derived>
-FieldProblem<Derived>::FieldProblem(const Material* mat, const Domain* dom,
-                                    long nemit, long maxscat, long maxloop)
-: Base(mat, dom), nemit_(nemit), maxscat_(maxscat), maxloop_(maxloop)
+FieldProblem::FieldProblem(const Material* mat, const Domain* dom,
+                           long nemit, long maxscat, long maxloop)
+: Problem(mat, dom), nemit_(nemit), maxscat_(maxscat), maxloop_(maxloop)
 {}
 
-template<typename Derived>
-FieldProblem<Derived>::~FieldProblem()
+FieldProblem::~FieldProblem()
 {}
 
-template<typename Derived>
-std::string FieldProblem<Derived>::info() const
+std::string FieldProblem::info() const
 {
     std::ostringstream ss;
-    ss << Base::info() << std::endl;
+    ss << Problem::info() << std::endl;
     ss << "  nemit:   " << nemit_ << std::endl;
     ss << "  maxscat: " << maxscat_ << std::endl;
     ss << "  maxloop: " << maxloop_;
     return ss.str();
 }
 
-template<typename Derived>
-Progress FieldProblem<Derived>::initProgress() const
+Progress FieldProblem::initProgress() const
 {
     return Progress(nemit_, std::min(20l, nemit_));
 }
 
-template<typename Derived>
-typename FieldProblem<Derived>::Solution
-FieldProblem<Derived>::initSolution() const
+ArrayXXd FieldProblem::initSolution() const
 {
-    return Solution(Base::dom());
+    return Field(rows(), dom()).data();
 }
 
-template<typename Derived>
-typename FieldProblem<Derived>::Solution
-FieldProblem<Derived>::solve(Rng& gen, Progress* prog) const
+ArrayXXd FieldProblem::solve(Rng& gen, Progress* prog) const
 {
-    Field<Type, Num> fld(Base::dom());
+    Field fld(rows(), dom());
     
-    const Emitter::Pointers emitPtrs = Base::dom()->emitPtrs();
+    const Emitter::Pointers emitPtrs = dom()->emitPtrs();
     long nemitter = emitPtrs.size();
     
-    Eigen::ArrayXd weight(nemitter);
+    Eigen::Array<double, Eigen::Dynamic, 1> weight(nemitter);
     for (int i = 0; i < nemitter; ++i)
     {
         weight(i) = emitPtrs.at(i)->emitWeight();
@@ -390,9 +364,7 @@ FieldProblem<Derived>::solve(Rng& gen, Progress* prog) const
     }
     long nemit = emitCdf(nemitter - 1);
     
-    double power = weightSum / nemit * Base::mat()->fluxSum() / 4.;
-    
-    FieldAccumF fun = accumFun();
+    double power = weightSum / nemit * mat()->fluxSum() / 4.;
     
     long maxloop = (maxloop_ != 0 ? maxloop_ : loopFactor_ * maxscat_);
     
@@ -409,19 +381,19 @@ FieldProblem<Derived>::solve(Rng& gen, Progress* prog) const
         const Subdomain* sdom = e->emitSdom();
         const Boundary* bdry = e->emitBdry();
         
-        Phonon::Prop prop = Base::mat()->drawFluxProp(gen);
+        Phonon::Prop prop = mat()->drawFluxProp(gen);
 #ifdef DEBUG
         TrkPhonon phn = e->emit(prop, gen);
 #else
         Phonon phn = e->emit(prop, gen);
 #endif
-        Base::mat()->drawScatNext(phn, gen);
+        mat()->drawScatNext(phn, gen);
         
         for (long i = 0; i < maxloop; i++)
         {
             Phonon pre(phn);
             
-            double vel = Base::mat()->vel(phn);
+            double vel = mat()->vel(phn);
             bdry = sdom->advect(phn, vel);
             
             if (!phn.alive())
@@ -430,7 +402,7 @@ FieldProblem<Derived>::solve(Rng& gen, Progress* prog) const
                 break;
             }
             
-            VectorNT amount = phn.sign() * fun(pre, phn);
+            VectorXd amount = phn.sign() * accumAmt(pre, phn);
             
             fld.accumulate(sdom, pre.pos(), phn.pos(), amount);
             
@@ -448,274 +420,222 @@ FieldProblem<Derived>::solve(Rng& gen, Progress* prog) const
             }
             else
             {
-                Base::mat()->scatter(phn, gen);
+                mat()->scatter(phn, gen);
             }
             if (!phn.alive() || phn.nscat() >= maxscat_) break;
         }
         prog->incrCount();
     }
     
-    Field<Type, Num> factor(power * postMult());
+    ArrayXXd sol = postProc(fld.data());
     
-    Field<Type, Num> cellVol(Base::dom(), CellVolF<Type, Num>());
+    Eigen::Array<double, 1, Eigen::Dynamic> vol;
+    vol = Field(1, dom(), CellVolF()).data().row(0);
     
-    return factor * fld.transform(fun) / cellVol;
+    return power * (sol.rowwise() / vol);
 }
 
-template class FieldProblem< TempProblem >;
-template class FieldProblem< FluxProblem >;
-template class FieldProblem< MultiProblem >;
-template class FieldProblem< CumTempProblem >;
-template class FieldProblem< CumFluxProblem >;
-
-TempAccumF::VectorNT TempAccumF::operator()(const Phonon& before,
-                                            const Phonon& after) const
-{
-    Eigen::Matrix<double, 1, 1> vec;
-    vec(0) = after.time() - before.time();
-    return vec;
-}
-
-TempAccumF::VectorNT TempAccumF::operator()(const VectorNT& elem) const
-{
-    return elem;
-}
+//----------------------------------------
+//  Field problem implementations
+//----------------------------------------
 
 TempProblem::TempProblem()
-: Base()
+: FieldProblem()
 {}
 
 TempProblem::TempProblem(const Material* mat, const Domain* dom,
                          long nemit, long maxscat, long maxloop)
-: Base(mat, dom, nemit, maxscat, maxloop)
+: FieldProblem(mat, dom, nemit, maxscat, maxloop)
 {}
 
 std::string TempProblem::info() const
 {
     std::ostringstream ss;
-    ss << "TempProblem " << this << std::endl;
-    ss << Base::info();
+    ss << "TempProblem " << static_cast<const Problem*>(this) << std::endl;
+    ss << FieldProblem::info();
     return ss.str();
 }
 
-TempProblem::VectorNT TempProblem::postMult() const
+long TempProblem::rows() const
 {
-    Eigen::Matrix<double, 1, 1> vec;
-    vec(0) = 1. / mat()->energySum();
-    return vec;
+    return 1;
 }
 
-TempProblem::FieldAccumF TempProblem::accumFun() const
+VectorXd TempProblem::accumAmt(const Phonon& before, const Phonon& after) const
 {
-    return TempAccumF();
+    return VectorXd::Constant(1, after.time() - before.time());
 }
 
-FluxAccumF::FluxAccumF(const Eigen::Vector3d& dir)
-: dir_(dir)
-{}
-
-FluxAccumF::VectorNT FluxAccumF::operator()(const Phonon& before,
-                                            const Phonon& after) const
+ArrayXXd TempProblem::postProc(const ArrayXXd& data) const
 {
-    Eigen::Matrix<double, 1, 1> vec;
-    vec(0) = (after.pos() - before.pos()).dot(dir_);
-    return vec;
-}
-
-FluxAccumF::VectorNT FluxAccumF::operator()(const VectorNT& elem) const
-{
-    return elem;
+    return data / mat()->energySum();
 }
 
 FluxProblem::FluxProblem()
-: Base()
+: FieldProblem()
 {}
 
 FluxProblem::FluxProblem(const Material* mat, const Domain* dom,
-                         const Eigen::Vector3d& dir,
                          long nemit, long maxscat, long maxloop)
-: Base(mat, dom, nemit, maxscat, maxloop), dir_(dir.normalized())
+: FieldProblem(mat, dom, nemit, maxscat, maxloop)
 {}
 
 std::string FluxProblem::info() const
 {
-    static const Eigen::IOFormat fmt(0, 0, " ", ";", "", "", "[", "]");
+    Eigen::IOFormat fmt(0, 0, " ", ";", "", "", "[", "]");
     std::ostringstream ss;
-    ss << "FluxProblem " << this << std::endl;
-    ss << Base::info() << std::endl;
-    ss << "  dir:     " << dir_.transpose().format(fmt);
+    ss << "FluxProblem " << static_cast<const Problem*>(this) << std::endl;
+    ss << FieldProblem::info();
     return ss.str();
 }
 
-FluxProblem::VectorNT FluxProblem::postMult() const
+long FluxProblem::rows() const
 {
-    return Eigen::Matrix<double, 1, 1>::Ones();
+    return 3;
 }
 
-FluxProblem::FieldAccumF FluxProblem::accumFun() const
+VectorXd FluxProblem::accumAmt(const Phonon& before, const Phonon& after) const
 {
-    return FluxAccumF(dir_);
+    return after.pos() - before.pos();
 }
 
-MultiAccumF::MultiAccumF(const Eigen::Matrix3d& rot)
-: inv_(rot.transpose())
-{}
-
-MultiAccumF::VectorNT MultiAccumF::operator()(const Phonon& before,
-                                              const Phonon& after) const
+ArrayXXd FluxProblem::postProc(const ArrayXXd& data) const
 {
-    double dtime = after.time() - before.time();
-    Eigen::Vector3d dpos = after.pos() - before.pos();
-    return (Eigen::Vector4d() << dtime, dpos).finished();
-}
-
-MultiAccumF::VectorNT MultiAccumF::operator()(const VectorNT& elem) const
-{
-    Eigen::Vector4d newValue;
-    newValue << elem(0), inv_ * elem.tail<3>();
-    return newValue;
+    return data;
 }
 
 MultiProblem::MultiProblem()
-: Base()
+: FieldProblem()
 {}
 
 MultiProblem::MultiProblem(const Material* mat, const Domain* dom,
-                           const Eigen::Matrix3d& rot,
                            long nemit, long maxscat, long maxloop)
-: Base(mat, dom, nemit, maxscat, maxloop), rot_(rot)
-{
-    BOOST_ASSERT_MSG(Matrix3d::Identity().isApprox(rot * rot.transpose()),
-                     "Direction matrix must be orthogonal");
-}
-
-MultiProblem::MultiProblem(const Material* mat, const Domain* dom,
-                           long nemit, long maxscat, long maxloop)
-: Base(mat, dom, nemit, maxscat, maxloop), rot_(Matrix3d::Identity())
+: FieldProblem(mat, dom, nemit, maxscat, maxloop)
 {}
 
 std::string MultiProblem::info() const
 {
-    static const Eigen::IOFormat fmt(0, 0, " ", ";", "", "", "[", "]");
+    Eigen::IOFormat fmt(0, 0, " ", ";", "", "", "[", "]");
     std::ostringstream ss;
-    ss << "MultiProblem " << this << std::endl;
-    ss << Base::info() << std::endl;
-    ss << "  rot:     " << rot_.format(fmt);
+    ss << "MultiProblem " << static_cast<const Problem*>(this) << std::endl;
+    ss << FieldProblem::info();
     return ss.str();
 }
 
-MultiProblem::VectorNT MultiProblem::postMult() const
+long MultiProblem::rows() const
 {
-    return Eigen::Vector4d(1. / mat()->energySum(), 1., 1., 1.);
+    return 4;
 }
 
-MultiProblem::FieldAccumF MultiProblem::accumFun() const
+VectorXd MultiProblem::accumAmt(const Phonon& before, const Phonon& after) const
 {
-    return MultiAccumF(rot_);
+    double dtime = after.time() - before.time();
+    Vector3d dpos = after.pos() - before.pos();
+    return (Eigen::Vector4d() << dtime, dpos).finished();
 }
 
-template<typename F>
-CumF<F>::CumF(long size, long step, const F& fun)
-: size_(size), step_(step), fun_(fun)
-{}
-
-template<typename F>
-typename CumF<F>::VectorNT CumF<F>::operator()(const Phonon& before,
-                                      const Phonon& after) const
+ArrayXXd MultiProblem::postProc(const ArrayXXd& data) const
 {
-    long index = (before.nscat() + step_ - 1) / step_;
-    BOOST_ASSERT_MSG(index <= size_, "Index out of bounds");
-    
-    Eigen::Matrix<double, 1, 1> value = fun_(before, after);
-    return value(0) * Eigen::VectorXd::Unit(size_ + 1, index);
+    ArrayXXd sol(data);
+    sol.row(0) /= mat()->energySum();
+    return sol;
 }
-
-template<typename F>
-typename CumF<F>::VectorNT CumF<F>::operator()(const VectorNT& elem) const
-{
-    Eigen::VectorXd cumsum(elem);
-    for (long i = 1; i <= size_; ++i)
-    {
-        cumsum(i) += cumsum(i-1);
-    }
-    return cumsum;
-}
-
-CumTempAccumF::CumTempAccumF(long size, long step, const TempAccumF& fun)
-: CumF<TempAccumF>(size, step, fun)
-{}
 
 CumTempProblem::CumTempProblem()
-: Base()
+: FieldProblem()
 {}
 
 CumTempProblem::CumTempProblem(const Material* mat, const Domain* dom,
                                long nemit, long size,
                                long maxscat, long maxloop)
-: Base(mat, dom, nemit, maxscat, maxloop), size_(size)
+: FieldProblem(mat, dom, nemit, maxscat, maxloop), size_(size)
 {
     step_ = (maxscat - 1) / size;
-    if ((maxscat - 1) % size != 0l) step_++;
+    if ((maxscat - 1) % size != 0) step_++;
     
 }
 
 std::string CumTempProblem::info() const
 {
     std::ostringstream ss;
-    ss << "CumTempProblem " << this << std::endl;
-    ss << Base::info() << std::endl;
+    ss << "CumTempProblem " << static_cast<const Problem*>(this) << std::endl;
+    ss << FieldProblem::info() << std::endl;
     ss << "  size:    " << size_;
     return ss.str();
 }
 
-CumTempProblem::VectorNT CumTempProblem::postMult() const
+long CumTempProblem::rows() const
 {
-    double scalar = 1. / mat()->energySum();
-    return Eigen::VectorXd::Constant(size_ + 1, scalar);
+    return size_ + 1;
 }
 
-CumTempProblem::FieldAccumF CumTempProblem::accumFun() const
+VectorXd CumTempProblem::accumAmt(const Phonon& before,
+                                  const Phonon& after) const
 {
-    return CumTempAccumF(size_, step_, TempAccumF());
+    VectorXd vec;
+    vec.setZero(size_ + 1);
+    long index = (before.nscat() + step_ - 1) / step_;
+    vec(index) = after.time() - before.time();
+    return vec;
 }
 
-CumFluxAccumF::CumFluxAccumF(long size, long step, const FluxAccumF& fun)
-: CumF<FluxAccumF>(size, step, fun)
-{}
+ArrayXXd CumTempProblem::postProc(const ArrayXXd& data) const
+{
+    ArrayXXd sol(data);
+    for (long i = 0; i < size_; ++i)
+    {
+        sol.row(i + 1) += sol.row(i);
+    }
+    return sol / mat()->energySum();
+}
 
 CumFluxProblem::CumFluxProblem()
-: Base()
+: FieldProblem()
 {}
 
 CumFluxProblem::CumFluxProblem(const Material* mat, const Domain* dom,
-                               const Eigen::Vector3d& dir,
                                long nemit, long size,
                                long maxscat, long maxloop)
-: Base(mat, dom, nemit, maxscat, maxloop), dir_(dir.normalized()), size_(size)
+: FieldProblem(mat, dom, nemit, maxscat, maxloop), size_(size)
 {
     step_ = (maxscat - 1) / size;
-    if ((maxscat - 1) % size != 0l) step_++;
-    
+    if ((maxscat - 1) % size != 0) step_++;
 }
 
 std::string CumFluxProblem::info() const
 {
-    static const Eigen::IOFormat fmt(0, 0, " ", ";", "", "", "[", "]");
+    Eigen::IOFormat fmt(0, 0, " ", ";", "", "", "[", "]");
     std::ostringstream ss;
-    ss << Base::info() << std::endl;
-    ss << "  size:    " << size_ << std::endl;
-    ss << "  dir:     " << dir_.transpose().format(fmt);
+    ss << "CumFluxProblem " << static_cast<const Problem*>(this) << std::endl;
+    ss << FieldProblem::info() << std::endl;
+    ss << "  size:    " << size_;
     return ss.str();
 }
 
-CumFluxProblem::VectorNT CumFluxProblem::postMult() const
+long CumFluxProblem::rows() const
 {
-    return Eigen::VectorXd::Ones(size_ + 1);
+    return 3*(size_ + 1);
 }
 
-CumFluxProblem::FieldAccumF CumFluxProblem::accumFun() const
+VectorXd CumFluxProblem::accumAmt(const Phonon& before,
+                                  const Phonon& after) const
 {
-    return CumFluxAccumF(size_, step_, FluxAccumF(dir_));
+    VectorXd vec;
+    vec.setZero(3*(size_ + 1));
+    long index = 3*((before.nscat() + step_ - 1) / step_);
+    vec.segment<3>(index) = after.pos() - before.pos();
+    return vec;
+}
+
+ArrayXXd CumFluxProblem::postProc(const ArrayXXd& data) const
+{
+    ArrayXXd sol(data);
+    long cols = data.cols();
+    for (long i = 0; i < size_; ++i)
+    {
+        sol.block(3*(i + 1), 0, 3, cols) += sol.block(3*i, 0, 3, cols);
+    }
+    return sol;
 }
 
 

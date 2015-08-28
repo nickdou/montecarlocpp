@@ -146,7 +146,7 @@ double Parallelogram::area() const
 
 Vector3d Parallelogram::drawPos(Rng& gen) const
 {
-    static UniformDist01 dist; // [0, 1)
+    UniformDist01 dist; // [0, 1)
     double r1 = dist(gen), r2 = dist(gen);
     return r1*i_ + r2*j_;
 }
@@ -181,7 +181,7 @@ double Triangle::area() const
 
 Vector3d Triangle::drawPos(Rng& gen) const
 {
-    static UniformDist01 dist; // [0, 1)
+    UniformDist01 dist; // [0, 1)
     double r1 = dist(gen), r2 = dist(gen);
     return r1 + r2 < 1. ? r1*i_ + r2*j_ : (1. - r1)*i_ + (1. - r2)*j_;
 }
@@ -189,22 +189,23 @@ Vector3d Triangle::drawPos(Rng& gen) const
 template<int N>
 Polygon<N>::Polygon()
 {
-    verts_ = Eigen::Matrix<double, 3, N - 1>::Zero();
-    areas_ = Eigen::Matrix<double, 1, N - 2>::Zero();
+    verts_.setZero(3, N - 1);
+    areas_.setZero(N - 2);
 }
 
 template<int N>
-Polygon<N>::Polygon(const Eigen::Matrix<double, 3, N - 1>& v)
-: verts_(v)
+Polygon<N>::Polygon(const Matrix3Xd& verts)
+: verts_(verts), areas_(N - 2)
 {
-    Vector3d norm = normal();
+    BOOST_ASSERT_MSG(verts_.cols() == N - 1, "Incorrect number of vertices");
+    
     for (int n = 0; n < N - 2; ++n)
     {
         Vector3d cross = verts_.col(n).cross( verts_.col(n + 1) );
         areas_(n) = cross.norm() / 2.;
         
         BOOST_ASSERT_MSG(areas_(n) > Dbl::min(), "Area too small");
-        BOOST_ASSERT_MSG(cross.normalized().isApprox(norm),
+        BOOST_ASSERT_MSG(cross.normalized().isApprox(normal()),
                          "Normals are inconsistent");
     }
     
@@ -216,7 +217,9 @@ Polygon<N>::Polygon(const Eigen::Matrix<double, 3, N - 1>& v)
 template<int N>
 std::string Polygon<N>::type() const
 {
-    return (std::ostringstream() << N).str();
+    std::ostringstream ss;
+    ss << N;
+    return ss.str();
 }
 
 template<int N>
@@ -242,7 +245,7 @@ Vector3d Polygon<N>::drawPos(Rng& gen) const
 {
     long n = areaDist_(gen);
     Vector3d i = verts_.col(n), j = verts_.col(n + 1);
-    static UniformDist01 dist; // [0, 1)
+    UniformDist01 dist; // [0, 1)
     double r1 = dist(gen), r2 = dist(gen);
     return r1 + r2 < 1. ? r1*i + r2*j : (1. - r1)*i + (1. - r2)*j;
 }

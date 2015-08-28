@@ -11,7 +11,9 @@
 #include <Eigen/Core>
 #include <cmath>
 
-Eigen::Vector3d drawIso(Rng& gen)
+using Eigen::Vector3d;
+
+Vector3d drawIso(Rng& gen)
 {
     static const UniformDist distOne(-1., 1.); // [-1, 1)
     
@@ -19,12 +21,12 @@ Eigen::Vector3d drawIso(Rng& gen)
     double sinTheta = std::sqrt(1. - cosTheta*cosTheta);
     double phi = PI * distOne(gen);
     
-    return Eigen::Vector3d(sinTheta * std::cos(phi),
-                           sinTheta * std::sin(phi),
-                           cosTheta);
+    return Vector3d(sinTheta * std::cos(phi),
+                    sinTheta * std::sin(phi),
+                    cosTheta);
 }
 
-Eigen::Vector3d drawAniso(Rng& gen, bool bidir)
+Vector3d drawAniso(Rng& gen, bool bidir)
 {
     static const UniformDist distOne(-1., 1.);  // [-1, 1)
     
@@ -36,7 +38,7 @@ Eigen::Vector3d drawAniso(Rng& gen, bool bidir)
     double cosTheta = sign*std::sqrt(1. - sinSqTheta);
     double phi = PI * distOne(gen);
     
-    return Eigen::Vector3d(sinTheta * std::cos(phi),
-                           sinTheta * std::sin(phi),
-                           cosTheta);
+    return Vector3d(sinTheta * std::cos(phi),
+                    sinTheta * std::sin(phi),
+                    cosTheta);
 }

@@ -41,30 +41,30 @@ Subdomain::Subdomain()
 Subdomain::Subdomain(double vol, const Vector3d& o, const Matrix3d& mat,
                      const Vector3l& div)
 : vol_(vol), o_(o), mat_(mat), inv_(mat.inverse()),
-div_(div), shape_(div.cwiseMax(1l)), max_(div.cwiseMax(1l) - Vector3l::Ones()),
-eps_(100. * Dbl::epsilon() * mat.colwise().norm().minCoeff())
+div_(div), shape_(div.cwiseMax(1)), max_(div.cwiseMax(1) - Vector3l::Ones()),
+eps_(100. * Dbl::epsilon() * mat.colwise().norm().maxCoeff())
 {
-    long dim = (div.array() < 0l).any() ? -1l : (div.array() > 0l).count();
+    long dim = (div_.array() < 0).any() ? -1 : (div_.array() > 0).count();
     switch (dim)
     {
-        case -1l :
+        case -1 :
             shape_ = Vector3l::Zero();
             max_ = Vector3l::Zero();
             accum_ = -2;
             break;
             
-        case 0l :
+        case 0 :
             accum_ = -1;
             break;
             
-        case 1l :
+        case 1 :
             Vector3l::Index dir;
             div_.maxCoeff(&dir);
             accum_ = static_cast<int>(dir); // = {0, 1, 2}
             break;
             
-        case 2l :
-        case 3l :
+        case 2 :
+        case 3 :
             accum_ = static_cast<int>(dim) + 1; // = {3, 4}
             break;
     }
@@ -275,7 +275,7 @@ double ParallelepipedImpl::cellVol(const Vector3l&,
 Vector3d ParallelepipedImpl::drawPos(const Vector3d& o,
                                      const Matrix3d& mat, Rng& gen)
 {
-    static UniformDist01 dist; // [0, 1)
+    UniformDist01 dist; // [0, 1)
     Vector3d coord(dist(gen), dist(gen), dist(gen));
     return o + mat * coord;
 }
@@ -288,7 +288,7 @@ double TriangularPrismImpl::cellVol(const Vector3l& index,
     double f0 = 1. - index2.cwiseQuotient(shape2).sum();
     if (f0 <= 0.) return 0.;
     
-    Eigen::Matrix<long, 2, 1> corner(1l, 1l);
+    Eigen::Matrix<long, 2, 1> corner(1, 1);
     double f1 = f0 - corner.cast<double>().cwiseQuotient(shape2).sum();
     if (f1 >= 0.) return vol / shape.prod();
     
@@ -309,7 +309,7 @@ double TriangularPrismImpl::cellVol(const Vector3l& index,
 Vector3d TriangularPrismImpl::drawPos(const Vector3d& o,
                                       const Matrix3d& mat, Rng& gen)
 {
-    static UniformDist01 dist; // [0, 1)
+    UniformDist01 dist; // [0, 1)
     Vector3d coord(dist(gen), dist(gen), dist(gen));
     if (coord(0) + coord(1) > 1.)
     {
@@ -327,15 +327,15 @@ double TetrahedronImpl::cellVol(const Vector3l& index,
     double f0 = 1. - index3.cwiseQuotient(shape3).sum();
     if (f0 <= 0.) return 0.;
     
-    Vector3l corner(1l, 1l, 1l);
+    Vector3l corner(1, 1, 1);
     double f1 = f0 - corner.cast<double>().cwiseQuotient(shape3).sum();
     if (f1 >= 0.) return vol / shape.prod();
     
     typedef Eigen::Matrix<long, 3, 6> Matrix36l;
     static const Matrix36l pts = (Matrix36l() <<
-                                  1l, 0l, 0l, 0l, 1l, 1l,
-                                  0l, 1l, 0l, 1l, 0l, 1l,
-                                  0l, 0l, 1l, 1l, 1l, 0l).finished();
+                                  1, 0, 0, 0, 1, 1,
+                                  0, 1, 0, 1, 0, 1,
+                                  0, 0, 1, 1, 1, 0).finished();
     
     double frac = std::pow(f0, 3);
     for (int i = 0; i < 6; i++)
@@ -351,7 +351,7 @@ double TetrahedronImpl::cellVol(const Vector3l& index,
 Vector3d TetrahedronImpl::drawPos(const Vector3d& o,
                                   const Matrix3d& mat, Rng& gen)
 {
-    static UniformDist01 dist; // [0, 1)
+    UniformDist01 dist; // [0, 1)
     Vector3d coord(dist(gen), dist(gen), dist(gen));
     
     if (coord(0) + coord(1) > 1.)

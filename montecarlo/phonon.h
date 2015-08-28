@@ -15,6 +15,8 @@
 
 using Eigen::Vector3d;
 
+typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Matrix3Xd;
+
 class Phonon
 {
     
@@ -70,9 +72,6 @@ public:
 
 class TrkPhonon : public Phonon
 {
-public:
-    typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Matrix3Xd;
-    
 private:
     std::vector<Vector3d> traj_;
     

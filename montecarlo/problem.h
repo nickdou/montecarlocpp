@@ -9,16 +9,10 @@
 #ifndef __montecarlocpp__problem__
 #define __montecarlocpp__problem__
 
-#include "field.h"
-#include "domain.h"
-#include "subdomain.h"
-#include "material.h"
 #include "phonon.h"
 #include "random.h"
 #include <Eigen/Core>
 #include <boost/optional.hpp>
-#include <boost/type_traits.hpp>
-#include <boost/mpl/assert.hpp>
 #include <vector>
 #include <iostream>
 #include <string>
@@ -27,6 +21,10 @@
 
 using Eigen::Vector3d;
 using Eigen::Matrix3d;
+using Eigen::VectorXd;
+using Eigen::ArrayXXd;
+
+typedef Eigen::Matrix<long, 3, 1> Vector3l;
 
 class Clock
 {
@@ -37,7 +35,6 @@ public:
     Clock();
 
     std::string stopwatch();
-    
     static std::string timestamp();
 };
 
@@ -61,22 +58,11 @@ public:
     long incrEsc();
 };
 
-template<typename Derived>
-struct ProbTraits
-{};
+class Material;
+class Domain;
 
-template<typename Derived>
-class Problem;
-
-template<typename Derived>
-std::ostream& operator<<(std::ostream& os, const Problem<Derived>& prob);
-
-template<typename Derived>
 class Problem
 {
-public:
-    typedef typename ProbTraits<Derived>::Solution Solution;
-    
 private:
     const Material* mat_;
     const Domain* dom_;
@@ -93,25 +79,13 @@ public:
     const Domain* dom() const;
     
     virtual Progress initProgress() const = 0;
-    virtual Solution solve(Rng& gen, Progress* prog) const = 0;
+    virtual ArrayXXd solve(Rng& gen, Progress* prog) const = 0;
     
-    friend std::ostream& operator<< <>(std::ostream& os, const Problem& prob);
+    friend std::ostream& operator<<(std::ostream& os, const Problem& prob);
 };
 
-class TrajProblem;
-
-template<>
-struct ProbTraits<TrajProblem>
+class TrajProblem : public Problem
 {
-    typedef TrkPhonon::Matrix3Xd Solution;
-};
-
-class TrajProblem : public Problem<TrajProblem>
-{
-public:
-    typedef Problem<TrajProblem> Base;
-    typedef TrkPhonon::Matrix3Xd Solution;
-    
 private:
     static const long loopFactor_ = 100;
     
@@ -126,56 +100,25 @@ public:
     TrajProblem(const Material* mat, const Domain* dom,
                 const Phonon::Prop& prop,
                 const Vector3d& pos, const Vector3d& dir,
-                long maxscat = 100l, long maxloop = 0l);
+                long maxscat = 100, long maxloop = 0);
     TrajProblem(const Material* mat, const Domain* dom,
                 const Phonon::Prop& prop, const Vector3d& pos,
-                long maxscat = 100l, long maxloop = 0l);
+                long maxscat = 100, long maxloop = 0);
     TrajProblem(const Material* mat, const Domain* dom,
                 const Vector3d& pos, const Vector3d& dir,
-                long maxscat = 100l, long maxloop = 0l);
+                long maxscat = 100, long maxloop = 0);
     TrajProblem(const Material* mat, const Domain* dom,
                 const Vector3d& pos,
-                long maxscat = 100l, long maxloop = 0l);
+                long maxscat = 100, long maxloop = 0);
     TrajProblem(const Material* mat, const Domain* dom,
-                long maxscat = 100l, long maxloop = 0l);
+                long maxscat = 100, long maxloop = 0);
     
     Progress initProgress() const;
-    Solution solve(Rng& gen, Progress* prog) const;
+    ArrayXXd solve(Rng& gen, Progress* prog) const;
 };
 
-template<typename T, int N>
-struct CellVolF
+class FieldProblem : public Problem
 {
-    typedef Eigen::Matrix<double, N, 1> VectorNT;
-    typedef Eigen::Matrix<long, 3, 1> Vector3l;
-    
-    VectorNT operator()(const Subdomain* sdom, const Vector3l& index) const;
-};
-
-template<typename T, int N>
-struct AccumF
-{
-    typedef Eigen::Matrix<T, N, 1> VectorNT;
-    
-    virtual VectorNT operator()(const Phonon& before,
-                                const Phonon& after) const = 0;
-    virtual VectorNT operator()(const VectorNT& elem) const = 0;
-};
-
-template<typename Derived>
-class FieldProblem : public Problem<Derived>
-{
-public:
-    typedef Problem<Derived> Base;
-    typedef typename ProbTraits<Derived>::Solution Solution;
-    typedef typename ProbTraits<Derived>::FieldAccumF FieldAccumF;
-    
-    typedef typename Solution::Type Type;
-    static const int Num = Solution::Num;
-    
-    typedef Eigen::Matrix<Type, Num, 1> VectorNT;
-    BOOST_MPL_ASSERT((boost::is_same< Solution, Field<Type, Num> >));
-    
 private:
     static const long loopFactor_ = 100;
     long nemit_, maxscat_, maxloop_;
@@ -190,35 +133,26 @@ public:
     virtual ~FieldProblem();
     
     Progress initProgress() const;
-    Solution initSolution() const;
+    ArrayXXd initSolution() const;
     
-    Solution solve(Rng& gen, Progress* prog) const;
+    ArrayXXd solve(Rng& gen, Progress* prog) const;
     
 private:
-    virtual VectorNT postMult() const = 0;
-    virtual FieldAccumF accumFun() const = 0;
+    virtual long rows() const = 0;
+    virtual VectorXd accumAmt(const Phonon& before, const Phonon& after) const = 0;
+    virtual ArrayXXd postProc(const ArrayXXd& data) const = 0;
 };
 
-class TempProblem;
+class Subdomain;
 
-struct TempAccumF : public AccumF<double, 1>
-{
-    VectorNT operator()(const Phonon& before, const Phonon& after) const;
-    VectorNT operator()(const VectorNT& elem) const;
-};
-
-template<>
-struct ProbTraits<TempProblem>
-{
-    typedef Field<double, 1> Solution;
-    typedef TempAccumF FieldAccumF;
-};
-
-class TempProblem : public FieldProblem<TempProblem>
+class CellVolF
 {
 public:
-    typedef FieldProblem<TempProblem> Base;
-    
+    VectorXd operator()(const Subdomain* sdom, const Vector3l& index) const;
+};
+
+class TempProblem : public FieldProblem
+{
 private:
     std::string info() const;
     
@@ -227,127 +161,46 @@ public:
     TempProblem(const Material* mat, const Domain* dom,
                 long nemit, long maxscat, long maxloop = 0);
     
-    Base::VectorNT postMult() const;
-    Base::FieldAccumF accumFun() const;
+private:
+    long rows() const;
+    VectorXd accumAmt(const Phonon& before, const Phonon& after) const;
+    ArrayXXd postProc(const ArrayXXd& data) const;
 };
 
-class FluxProblem;
-
-struct FluxAccumF : public AccumF<double, 1>
+class FluxProblem : public FieldProblem
 {
 private:
-    Vector3d dir_;
-    
-public:
-    FluxAccumF(const Vector3d& dir);
-    
-    VectorNT operator()(const Phonon& before, const Phonon& after) const;
-    VectorNT operator()(const VectorNT& elem) const;
-};
-
-template<>
-struct ProbTraits<FluxProblem>
-{
-    typedef Field<double, 1> Solution;
-    typedef FluxAccumF FieldAccumF;
-};
-
-class FluxProblem : public FieldProblem<FluxProblem>
-{
-public:
-    typedef FieldProblem<FluxProblem> Base;
-    
-private:
-    Vector3d dir_;
-    
     std::string info() const;
     
 public:
     FluxProblem();
     FluxProblem(const Material* mat, const Domain* dom,
-                const Vector3d& dir,
                 long nemit, long maxscat, long maxloop = 0);
     
-    Base::VectorNT postMult() const;
-    Base::FieldAccumF accumFun() const;
+private:
+    long rows() const;
+    VectorXd accumAmt(const Phonon& before, const Phonon& after) const;
+    ArrayXXd postProc(const ArrayXXd& data) const;
 };
 
-class MultiProblem;
-
-struct MultiAccumF : public AccumF<double, 4>
+class MultiProblem : public FieldProblem
 {
 private:
-    Matrix3d inv_;
-    
-public:
-    MultiAccumF(const Matrix3d& rot);
-    
-    VectorNT operator()(const Phonon& before, const Phonon& after) const;
-    VectorNT operator()(const VectorNT& elem) const;
-};
-
-template<>
-struct ProbTraits<MultiProblem>
-{
-    typedef Field<double, 4> Solution;
-    typedef MultiAccumF FieldAccumF;
-};
-
-class MultiProblem : public FieldProblem<MultiProblem>
-{
-public:
-    typedef FieldProblem<MultiProblem> Base;
-    
-private:
-    Matrix3d rot_;
-    
     std::string info() const;
     
 public:
     MultiProblem();
     MultiProblem(const Material* mat, const Domain* dom,
-                 const Matrix3d& rot,
-                 long nemit, long maxscat, long maxloop = 0);
-    MultiProblem(const Material* mat, const Domain* dom,
                  long nemit, long maxscat, long maxloop = 0);
     
-    Base::VectorNT postMult() const;
-    Base::FieldAccumF accumFun() const;
-};
-
-template<typename F>
-struct CumF : public AccumF<double, Eigen::Dynamic>
-{
 private:
-    long size_, step_;
-    F fun_;
-    
-public:
-    CumF(long size, long step, const F& fun);
-    
-    VectorNT operator()(const Phonon& before, const Phonon& after) const;
-    VectorNT operator()(const VectorNT& elem) const;
+    long rows() const;
+    VectorXd accumAmt(const Phonon& before, const Phonon& after) const;
+    ArrayXXd postProc(const ArrayXXd& data) const;
 };
 
-class CumTempProblem;
-
-struct CumTempAccumF : public CumF<TempAccumF>
+class CumTempProblem : public FieldProblem
 {
-    CumTempAccumF(long step, long size, const TempAccumF& fun);
-};
-
-template<>
-struct ProbTraits<CumTempProblem>
-{
-    typedef Field<double, Eigen::Dynamic> Solution;
-    typedef CumTempAccumF FieldAccumF;
-};
-
-class CumTempProblem : public FieldProblem<CumTempProblem>
-{
-public:
-    typedef FieldProblem<CumTempProblem> Base;
-    
 private:
     long size_, step_;
     
@@ -358,31 +211,15 @@ public:
     CumTempProblem(const Material* mat, const Domain* dom,
                    long nemit, long size, long maxscat, long maxloop = 0);
     
-    Base::VectorNT postMult() const;
-    Base::FieldAccumF accumFun() const;
-};
-
-class CumFluxProblem;
-
-struct CumFluxAccumF : public CumF<FluxAccumF>
-{
-    CumFluxAccumF(long step, long size, const FluxAccumF& fun);
-};
-
-template<>
-struct ProbTraits<CumFluxProblem>
-{
-    typedef Field<double, Eigen::Dynamic> Solution;
-    typedef CumFluxAccumF FieldAccumF;
-};
-
-class CumFluxProblem : public FieldProblem<CumFluxProblem>
-{
-public:
-    typedef FieldProblem<CumFluxProblem> Base;
-    
 private:
-    Vector3d dir_;
+    long rows() const;
+    VectorXd accumAmt(const Phonon& before, const Phonon& after) const;
+    ArrayXXd postProc(const ArrayXXd& data) const;
+};
+
+class CumFluxProblem : public FieldProblem
+{
+private:
     long size_, step_;
     
     std::string info() const;
@@ -390,11 +227,12 @@ private:
 public:
     CumFluxProblem();
     CumFluxProblem(const Material* mat, const Domain* dom,
-                   const Vector3d& dir,
                    long nemit, long size, long maxscat, long maxloop = 0);
     
-    Base::VectorNT postMult() const;
-    Base::FieldAccumF accumFun() const;
+private:
+    long rows() const;
+    VectorXd accumAmt(const Phonon& before, const Phonon& after) const;
+    ArrayXXd postProc(const ArrayXXd& data) const;
 };
 
 #endif

@@ -20,6 +20,9 @@
 
 using Eigen::Vector3d;
 using Eigen::Matrix3d;
+using Eigen::VectorXd;
+
+typedef Eigen::Matrix<double, 3, Eigen::Dynamic> Matrix3Xd;
 
 class Subdomain;
 
@@ -112,13 +115,13 @@ class Polygon : public Boundary::Shape
 private:
     BOOST_STATIC_ASSERT_MSG(N > 3, "Polygon must have more than 3 sides");
     
-    Eigen::Matrix<double, 3, N - 1> verts_;
-    Eigen::Matrix<double, 1, N - 2> areas_;
+    Matrix3Xd verts_;
+    VectorXd areas_;
     DiscreteDist areaDist_;
     
 public:
     Polygon();
-    Polygon(const Eigen::Matrix<double, 3, N - 1>& v);
+    Polygon(const Matrix3Xd& v);
     
     std::string type() const;
     bool isInit() const;
