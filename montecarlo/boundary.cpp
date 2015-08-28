@@ -195,7 +195,7 @@ Polygon<N>::Polygon()
 
 template<int N>
 Polygon<N>::Polygon(const Matrix3Xd& verts)
-: verts_(verts), areas_(N - 2)
+: verts_(verts), areas_(static_cast<int>(N - 2))
 {
     BOOST_ASSERT_MSG(verts_.cols() == N - 1, "Incorrect number of vertices");
     
