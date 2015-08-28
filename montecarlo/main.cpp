@@ -469,8 +469,7 @@ int main(int argc, const char * argv[]) {
         else calcStats( solveField(prob, nsim, clk) );
     }
     
-    std::cout << "Total time" << std::endl;
-    std::cout << clk.stopwatch() << std::endl << std::endl;
+    std::cout << "Total time: " << clk.stopwatch() << std::endl << std::endl;
     
     delete mat;
     delete dom;
