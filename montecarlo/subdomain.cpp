@@ -160,26 +160,26 @@ Vector3l Subdomain::coord2index(const Vector3d& coord) const
 
 const Boundary* Subdomain::advect(Phonon& phn, double vel) const
 {
-    double minDist = phn.scatNext();
+    double minDistance = phn.scatNext();
     const Boundary* newBdry = 0;
     
-    BOOST_ASSERT_MSG(minDist > 0., "Scattering distance not set");
+    BOOST_ASSERT_MSG(minDistance >= 0., "Scattering distance negative");
     
     for (Boundary::Pointers::const_iterator b = bdryPtrs_.begin();
          b != bdryPtrs_.end(); ++b)
     {
         if ((*b)->normal().dot(phn.dir()) >= 0.) continue;
         
-        double dist = (*b)->distance(phn);
-        if (dist < minDist)
+        double distance = (*b)->distance(phn);
+        if (distance < minDistance)
         {
-            minDist = dist;
+            minDistance = distance;
             newBdry = *b;
         }
     }
-    phn.move(minDist, vel);
+    phn.move(minDistance, vel);
     
-    bool negDist = (minDist < -eps_);
+    bool negDist = (minDistance < -eps_);
     bool outside = !isInside( phn.pos() );
     
     if (negDist || outside)

@@ -96,6 +96,7 @@ void Phonon::move(double distance, double vel)
 {
     BOOST_ASSERT_MSG(distance <= scatNext_, "Movement distance too large");
     scatNext_ -= distance;
+    if (scatNext_ < Dbl::min()) scatNext_ = 0.;
     
     BOOST_ASSERT_MSG(vel > Dbl::min(), "Velocity must be nonzero");
     time_ += distance / vel;
@@ -121,6 +122,7 @@ long Phonon::nscat() const
 void Phonon::scatNext(double distance)
 {
     BOOST_ASSERT_MSG(scatNext_ == 0., "Cannot reset scattering distance");
+    BOOST_ASSERT_MSG(distance > 0., "Scattering distance must be positive");
     scatNext_ = distance;
 }
 

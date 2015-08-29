@@ -215,8 +215,12 @@ Phonon::Prop Material::drawScatProp(Rng& gen) const
 void Material::drawScatNext(Phonon& phn, Rng& gen) const
 {
     UniformDist01 dist; // [0, 1)
-    double r = dist(gen);
-    phn.scatNext(vel(phn) * tau(phn) * -std::log(1. - r));
+    double distance = 0.;
+    while (distance < Dbl::min())
+    {
+        distance = vel(phn) * tau(phn) * -std::log(1. - dist(gen));
+    }
+    phn.scatNext(distance);
 }
 
 void Material::scatter(Phonon& phn, Rng& gen) const
@@ -236,7 +240,8 @@ std::string Material::info() const
     return ss.str();
 }
 
-std::ostream& operator<<(std::ostream& os, const Material& mat) {
+std::ostream& operator<<(std::ostream& os, const Material& mat)
+{
     return os << mat.info();
 }
 
