@@ -101,9 +101,9 @@ long Progress::incrCount()
             std::cout << '[' << std::string(next_, '|');
             std::cout << std::string(div_ - next_, '-') << ']';
             std::cout << " esc: " << esc_ << std::endl;
-            
-            if (next_ == div_) std::cout << std::endl;
         }
+        
+        if (count_ == tot_) std::cout << std::endl;
     }
     return count_;
 }
@@ -314,19 +314,46 @@ FieldProblem::FieldProblem()
 
 FieldProblem::FieldProblem(const Material* mat, const Domain* dom,
                            long nemit, long maxscat, long maxloop)
-: Problem(mat, dom), nemit_(nemit), maxscat_(maxscat), maxloop_(maxloop)
-{}
+: Problem(mat, dom)
+{
+    const Emitter::Pointers emitPtrs = dom->emitPtrs();
+    long nemitter = emitPtrs.size();
+    
+    VectorXd weight(nemitter);
+    for (long i = 0; i < nemitter; ++i)
+    {
+        weight(i) = emitPtrs.at(i)->emitWeight();
+    }
+    double weightSum = weight.sum();
+    
+    emitPdf_.resize(nemitter);
+    for (long i = 0; i < nemitter; ++i)
+    {
+        double frac = weight(i) / weightSum;
+        double rounded = std::ceil(frac * nemit - 0.5);
+        emitPdf_(i) = std::max(1l, static_cast<long>(rounded));
+    }
+    
+    nemit_ = emitPdf_.sum();
+    maxscat_ = maxscat;
+    maxloop_ = (maxloop != 0 ? maxloop : loopFactor_ * maxscat_);
+    
+    power_ = weightSum / nemit_ * mat->fluxSum() / 4.;
+}
 
 FieldProblem::~FieldProblem()
 {}
 
 std::string FieldProblem::info() const
 {
+    Eigen::IOFormat fmt(0, 0, " ", ";", "", "", "[", "]");
     std::ostringstream ss;
     ss << Problem::info() << std::endl;
+    ss << "  emitpdf: " << emitPdf_.transpose().format(fmt) << std::endl;
     ss << "  nemit:   " << nemit_ << std::endl;
     ss << "  maxscat: " << maxscat_ << std::endl;
-    ss << "  maxloop: " << maxloop_;
+    ss << "  maxloop: " << maxloop_ << std::endl;
+    ss << "  power:   " << power_;
     return ss.str();
 }
 
@@ -344,40 +371,22 @@ ArrayXXd FieldProblem::solve(Rng& gen, Progress* prog) const
 {
     Field fld(rows(), dom());
     
-    const Emitter::Pointers emitPtrs = dom()->emitPtrs();
-    long nemitter = emitPtrs.size();
-    
-    Eigen::Array<double, Eigen::Dynamic, 1> weight(nemitter);
-    for (int i = 0; i < nemitter; ++i)
+    VectorXl emitCdf(emitPdf_);
+    for (long i = 1; i < emitCdf.size(); ++i)
     {
-        weight(i) = emitPtrs.at(i)->emitWeight();
+        emitCdf(i) += emitCdf(i - 1);
     }
-    double weightSum = weight.sum();
     
-    Eigen::Array<long, Eigen::Dynamic, 1> emitCdf(nemitter);
-    for (int i = 0; i < nemitter; ++i)
-    {
-        double frac = weight(i) / weightSum;
-        double rounded = std::ceil(frac * nemit_ - 0.5);
-        emitCdf(i) = std::max(1l, static_cast<long>(rounded));
-        if (i > 0) emitCdf(i) += emitCdf(i - 1);
-    }
-    long nemit = emitCdf(nemitter - 1);
-    
-    double power = weightSum / nemit * mat()->fluxSum() / 4.;
-    
-    long maxloop = (maxloop_ != 0 ? maxloop_ : loopFactor_ * maxscat_);
-    
-    long* emitCdfBegin = emitCdf.data();
-    long* emitCdfEnd = emitCdf.data() + nemitter;
+    const long* emitCdfBegin = emitCdf.data();
+    const long* emitCdfEnd = emitCdf.data() + emitCdf.size();
     
 #pragma omp for schedule(static)
-    for (long n = 0; n < nemit; ++n)
+    for (long n = 0; n < nemit_; ++n)
     {
         long emitIndex = (std::upper_bound(emitCdfBegin, emitCdfEnd, n) -
                           emitCdfBegin);
         
-        const Emitter* e = emitPtrs.at(emitIndex);
+        const Emitter* e = dom()->emitPtrs().at(emitIndex);
         const Subdomain* sdom = e->emitSdom();
         const Boundary* bdry = e->emitBdry();
         
@@ -389,7 +398,7 @@ ArrayXXd FieldProblem::solve(Rng& gen, Progress* prog) const
 #endif
         mat()->drawScatNext(phn, gen);
         
-        for (long i = 0; i < maxloop; i++)
+        for (long i = 0; i < maxloop_; i++)
         {
             Phonon pre(phn);
             
@@ -432,7 +441,7 @@ ArrayXXd FieldProblem::solve(Rng& gen, Progress* prog) const
     Eigen::Array<double, 1, Eigen::Dynamic> vol;
     vol = Field(1, dom(), CellVolF()).data().row(0);
     
-    return power * (sol.rowwise() / vol);
+    return power_ * (sol.rowwise() / vol);
 }
 
 //----------------------------------------

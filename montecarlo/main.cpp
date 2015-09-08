@@ -165,10 +165,12 @@ ArrayXXd solveField(const FieldProblem* prob, const Clock& clk)
         }
     }
     
+    std::cout << "Output" << std::endl;
     printSolution(sol);
     
     ArrayXXd avg = prob->dom()->average(sol);
-    if (avg.cols() == 1 && sol.cols() > 1)
+    if (avg.cols() != sol.cols() || avg.rows() != sol.rows() ||
+        (avg != sol).any())
     {
         std::cout << "Averaged" << std::endl;
         printSolution(avg);

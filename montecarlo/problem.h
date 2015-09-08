@@ -25,6 +25,7 @@ using Eigen::VectorXd;
 using Eigen::ArrayXXd;
 
 typedef Eigen::Matrix<long, 3, 1> Vector3l;
+typedef Eigen::Matrix<long, Eigen::Dynamic, 1> VectorXl;
 
 class Clock
 {
@@ -122,6 +123,8 @@ class FieldProblem : public Problem
 private:
     static const long loopFactor_ = 100;
     long nemit_, maxscat_, maxloop_;
+    double power_;
+    VectorXl emitPdf_;
     
 protected:
     std::string info() const;

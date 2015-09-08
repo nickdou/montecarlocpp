@@ -707,8 +707,10 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
     Matrix3d mat3;
     Matrix3Xd mat4(3, 4);
     Vector3l sdomDiv;
-    const Vector3l noDiv(-1, -1, -1);
-    const Vector3d gradT(0., 0., -2.*dT/dim(0));
+    const Vector3l noDiv = Vector3l::Constant(-1);
+    const Vector3d noGrad = Vector3d::Zero();
+    const Vector3d gradT(dT/(s-2.*a-2.*(sqrt2+1.)*b-2.*(2.+sqrt2)*t), 0.,
+                         -dT/(s-2.*a-2.*(sqrt2+1.)*b-2.*(2.+sqrt2)*t));
     
     long p = 0;
     
@@ -721,7 +723,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             sqrt2*t, 0., 0.,
             s/4.-(2.+sqrt2)/2.*b-(2.-sqrt2)/2.*t, s/4.-(2.+sqrt2)/2.*(b+t), 0.,
             s/4.-(2.+sqrt2)/2.*b-t, s/4.-(2.+sqrt2)/2.*b-t, 0.;
-        sdom< 0>() = Sdom< 0>::type(o, mat4, noDiv(0), gradT);
+        sdom< 0>() = Sdom< 0>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -732,7 +734,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             sqrt2*t, 0., 0.,
             s/4.-(2.+sqrt2)/2.*b-(2.-sqrt2)/2.*t, s/4.-(2.+sqrt2)/2.*(b+t), 0.,
             s/4.-(2.+sqrt2)/2.*b-t, s/4.-(2.+sqrt2)/2.*b-t, 0.;
-        sdom< 1>() = Sdom< 1>::type(o, mat4, noDiv(0), gradT);
+        sdom< 1>() = Sdom< 1>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -743,7 +745,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             sqrt2*b, 0., 0.,
             s/4.-(2.-sqrt2)/2.*b-t, s/4.-(2.+sqrt2)/2.*b-t, 0.,
             s/4.-b-t, s/4.-b-t, 0.;
-        sdom< 2>() = Sdom< 2>::type(o, mat4, noDiv(0), gradT);
+        sdom< 2>() = Sdom< 2>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -754,7 +756,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             (sqrt2+1.)*t, 0., 0.,
             (sqrt2+1.)*t, t, 0.,
             t, t, 0.;
-        sdom< 3>() = Sdom< 3>::type(o, mat4, noDiv(0), gradT);
+        sdom< 3>() = Sdom< 3>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -765,7 +767,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             (sqrt2+1.)*t, 0., 0.,
             (sqrt2+1.)*t, t, 0.,
             t, t, 0.;
-        sdom< 4>() = Sdom< 4>::type(o, mat4, noDiv(0), gradT);
+        sdom< 4>() = Sdom< 4>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -775,7 +777,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             0., 0., t,
             sqrt2*b, 0., 0.,
             t, t, 0.;
-        sdom< 5>() = Sdom< 5>::type(o, mat3, noDiv, gradT);
+        sdom< 5>() = Sdom< 5>::type(o, mat3, noDiv, noGrad);
         
         u << t, 0., 0.;
         pts_.col(p++) = o + mat3.col(0)/2. + (mat3.col(2) + u)/3.;
@@ -792,7 +794,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             (sqrt2+1.)/2.*b+(sqrt2+1.)*t, 0., -(sqrt2+1.)/2.*b-t,
             (sqrt2+1.)/2.*b+(2.+sqrt2)/2.*t, 0.,
             -(sqrt2+1.)/2.*b-(2.+sqrt2)/2.*t;
-        sdom< 6>() = Sdom< 6>::type(o, mat4, noDiv(0), gradT);
+        sdom< 6>() = Sdom< 6>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -804,7 +806,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             (sqrt2+1.)/2.*b+(sqrt2+1.)*t, 0., -(sqrt2+1.)/2.*b-t,
             (sqrt2+1.)/2.*b+(2.+sqrt2)/2.*t, 0.,
             -(sqrt2+1.)/2.*b-(2.+sqrt2)/2.*t;
-        sdom< 7>() = Sdom< 7>::type(o, mat4, noDiv(0), gradT);
+        sdom< 7>() = Sdom< 7>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -815,7 +817,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             a-(sqrt2+1.)*(b+t), 0., 0., // CONSTRAINT
             a-(sqrt2+1.)/2.*b-t/sqrt2, 0., -(sqrt2+1.)/2.*b-(2.+sqrt2)/2.*t,
             0., 0., -a-t;
-        sdom< 8>() = Sdom< 8>::type(o, mat4, noDiv(0), gradT);
+        sdom< 8>() = Sdom< 8>::type(o, mat4, noDiv(0), noGrad);
         
         v << 0., 0., -a;
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(1) + v)/2.;
@@ -828,7 +830,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             sqrt2*(b+t), 0., 0.,
             (sqrt2-1.)/2.*b+t/sqrt2, 0., -(sqrt2+1.)/2.*b-t/sqrt2,
             0., 0., -b;
-        sdom< 9>() = Sdom< 9>::type(o, mat4, noDiv(0), gradT);
+        sdom< 9>() = Sdom< 9>::type(o, mat4, noDiv(0), noGrad);
         
         u << sqrt2*b, 0., 0.;
         v << 0., 0., -b+t;
@@ -843,7 +845,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             (sqrt2-1.)/2.*b+t/sqrt2, 0., -(sqrt2-1.)/2.*b-t/sqrt2,
             (sqrt2-1.)/2.*b, 0., -(sqrt2-1.)/2.*b-sqrt2*t,
             0., 0., -sqrt2*t;
-        sdom<10>() = Sdom<10>::type(o, mat4, noDiv(0), gradT);
+        sdom<10>() = Sdom<10>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -854,7 +856,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             (sqrt2-1.)/2.*b+t/sqrt2, 0., -(sqrt2-1.)/2.*b-t/sqrt2,
             (sqrt2-1.)/2.*b, 0., -(sqrt2-1.)/2.*b-sqrt2*t,
             0., 0., -sqrt2*t;
-        sdom<11>() = Sdom<11>::type(o, mat4, noDiv(0), gradT);
+        sdom<11>() = Sdom<11>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -864,7 +866,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             0., t, 0.,
             -t, 0., 0.,
             0., 0., b-t;  // CONSTRAINT
-        sdom<12>() = Sdom<12>::type(o, mat3, noDiv, gradT);
+        sdom<12>() = Sdom<12>::type(o, mat3, noDiv, noGrad);
         
         pts_.col(p++) = o + (mat3.col(0) + mat3.col(1))/3. + mat3.col(2)/2.;
 
@@ -875,7 +877,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             0., 0., t,
             0., t, t,
             0., t, 0.;
-        sdom<13>() = Sdom<13>::type(o, mat4, noDiv(0), gradT);
+        sdom<13>() = Sdom<13>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + mat4.rowwise().sum()/5.;
 
@@ -885,7 +887,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             0., t, 0.,
             -t, 0., t,
             0., 0., sqrt2*t;
-        sdom<14>() = Sdom<14>::type(o, mat3, noDiv, gradT);
+        sdom<14>() = Sdom<14>::type(o, mat3, noDiv, noGrad);
         
         pts_.col(p++) = o + (mat3.col(0) + mat3.col(1))/3. + mat3.col(2)/2.;
 
@@ -896,7 +898,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             0., b, 0.,
             -t, b, t,
             -b-t, 0., b+t;
-        sdom<15>() = Sdom<15>::type(o, mat4, noDiv(0), gradT);
+        sdom<15>() = Sdom<15>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
     }
@@ -1038,7 +1040,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             0., b, 0.,
             t, b, -t,
             b+t, 0., -b-t;
-        sdom<26>() = Sdom<26>::type(o, mat4, noDiv(0), gradT);
+        sdom<26>() = Sdom<26>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -1048,7 +1050,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             0., t, 0.,
             t, 0., -t,
             0., 0., -sqrt2*t;
-        sdom<27>() = Sdom<27>::type(o, mat3, noDiv, gradT);
+        sdom<27>() = Sdom<27>::type(o, mat3, noDiv, noGrad);
         
         pts_.col(p++) = o + (mat3.col(0) + mat3.col(1))/3. + mat3.col(2)/2.;
 
@@ -1059,7 +1061,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             0., 0., -t,
             0., t, -t,
             0., t, 0.;
-        sdom<28>() = Sdom<28>::type(o, mat4, noDiv(0), gradT);
+        sdom<28>() = Sdom<28>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + mat4.rowwise().sum()/5.;
 
@@ -1069,7 +1071,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             0., t, 0.,
             t, 0., 0.,
             0., 0., -b+t;  // CONSTRAINT
-        sdom<29>() = Sdom<29>::type(o, mat3, noDiv, gradT);
+        sdom<29>() = Sdom<29>::type(o, mat3, noDiv, noGrad);
         
         pts_.col(p++) = o + (mat3.col(0) + mat3.col(1))/3. + mat3.col(2)/2.;
 
@@ -1080,7 +1082,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             -(sqrt2-1.)/2.*b-t/sqrt2, 0., (sqrt2-1.)/2.*b+t/sqrt2,
             -(sqrt2-1.)/2.*b, 0., (sqrt2-1.)/2.*b+sqrt2*t,
             0., 0., sqrt2*t;
-        sdom<30>() = Sdom<30>::type(o, mat4, noDiv(0), gradT);
+        sdom<30>() = Sdom<30>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -1091,7 +1093,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             -(sqrt2-1.)/2.*b-t/sqrt2, 0., (sqrt2-1.)/2.*b+t/sqrt2,
             -(sqrt2-1.)/2.*b, 0., (sqrt2-1.)/2.*b+sqrt2*t,
             0., 0., sqrt2*t;
-        sdom<31>() = Sdom<31>::type(o, mat4, noDiv(0), gradT);
+        sdom<31>() = Sdom<31>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -1102,7 +1104,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             -sqrt2*(b+t), 0., 0.,
             -(sqrt2-1.)/2.*b-t/sqrt2, 0., (sqrt2+1.)/2.*b+t/sqrt2,
             0., 0., b;
-        sdom<32>() = Sdom<32>::type(o, mat4, noDiv(0), gradT);
+        sdom<32>() = Sdom<32>::type(o, mat4, noDiv(0), noGrad);
         
         u << -sqrt2*b, 0., 0.;
         v << 0., 0., b-t;
@@ -1117,7 +1119,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             -a+(sqrt2+1.)*(b+t), 0., 0., // CONSTRAINT
             -a+(sqrt2+1.)/2.*b+t/sqrt2, 0., (sqrt2+1.)/2.*b+(2.+sqrt2)/2.*t,
             0., 0., a+t;
-        sdom<33>() = Sdom<33>::type(o, mat4, noDiv(0), gradT);
+        sdom<33>() = Sdom<33>::type(o, mat4, noDiv(0), noGrad);
         
         v << 0., 0., a;
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(1) + v)/2.;
@@ -1131,7 +1133,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             -(sqrt2+1.)/2.*b-(sqrt2+1.)*t, 0., (sqrt2+1.)/2.*b+t,
             -(sqrt2+1.)/2.*b-(2.+sqrt2)/2.*t, 0.,
             (sqrt2+1.)/2.*b+(2.+sqrt2)/2.*t;
-        sdom<34>() = Sdom<34>::type(o, mat4, noDiv(0), gradT);
+        sdom<34>() = Sdom<34>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -1143,7 +1145,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             -(sqrt2+1.)/2.*b-(sqrt2+1.)*t, 0., (sqrt2+1.)/2.*b+t,
             -(sqrt2+1.)/2.*b-(2.+sqrt2)/2.*t, 0.,
             (sqrt2+1.)/2.*b+(2.+sqrt2)/2.*t;
-        sdom<35>() = Sdom<35>::type(o, mat4, noDiv(0), gradT);
+        sdom<35>() = Sdom<35>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
     }
@@ -1156,7 +1158,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             0., 0., -t,
             -sqrt2*b, 0., 0.,
             -t, t, 0.;
-        sdom<36>() = Sdom<36>::type(o, mat3, noDiv, gradT);
+        sdom<36>() = Sdom<36>::type(o, mat3, noDiv, noGrad);
         
         u << -t, 0., 0.;
         pts_.col(p++) = o + mat3.col(0)/2. + (mat3.col(2) + u)/3.;
@@ -1169,7 +1171,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             -(sqrt2+1.)*t, 0., 0.,
             -(sqrt2+1.)*t, t, 0.,
             -t, t, 0.;
-        sdom<37>() = Sdom<37>::type(o, mat4, noDiv(0), gradT);
+        sdom<37>() = Sdom<37>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -1180,7 +1182,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             -(sqrt2+1.)*t, 0., 0.,
             -(sqrt2+1.)*t, t, 0.,
             -t, t, 0.;
-        sdom<38>() = Sdom<38>::type(o, mat4, noDiv(0), gradT);
+        sdom<38>() = Sdom<38>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -1191,7 +1193,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             -sqrt2*b, 0., 0.,
             -s/4.+(2.-sqrt2)/2.*b+t, s/4.-(2.+sqrt2)/2.*b-t, 0.,
             -s/4.+b+t, s/4.-b-t, 0.;
-        sdom<39>() = Sdom<39>::type(o, mat4, noDiv(0), gradT);
+        sdom<39>() = Sdom<39>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -1202,7 +1204,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             -sqrt2*t, 0., 0.,
             -s/4.+(2.+sqrt2)/2.*b+(2.-sqrt2)/2.*t, s/4.-(2.+sqrt2)/2.*(b+t), 0.,
             -s/4.+(2.+sqrt2)/2.*b+t, s/4.-(2.+sqrt2)/2.*b-t, 0.;
-        sdom<40>() = Sdom<40>::type(o, mat4, noDiv(0), gradT);
+        sdom<40>() = Sdom<40>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
 
@@ -1213,7 +1215,7 @@ OctetDomain::OctetDomain(const Vector4d& dim, const Vector4l& div, double dT)
             -sqrt2*t, 0., 0.,
             -s/4.+(2.+sqrt2)/2.*b+(2.-sqrt2)/2.*t, s/4.-(2.+sqrt2)/2.*(b+t), 0.,
             -s/4.+(2.+sqrt2)/2.*b+t, s/4.-(2.+sqrt2)/2.*b-t, 0.;
-        sdom<41>() = Sdom<41>::type(o, mat4, noDiv(0), gradT);
+        sdom<41>() = Sdom<41>::type(o, mat4, noDiv(0), noGrad);
         
         pts_.col(p++) = o + (mat4.col(0) + mat4.col(2))/2.;
     }
